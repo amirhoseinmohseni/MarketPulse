@@ -1,4 +1,3 @@
-````markdown
 # MarketPulse
 
 AI-powered product validation and market intelligence platform.
@@ -264,7 +263,7 @@ MarketPulse is designed to demonstrate:
 * Business-oriented thinking
 
 ---
-```markdown
+
 # Contributing
 
 Contributions, ideas, and feedback are welcome.
