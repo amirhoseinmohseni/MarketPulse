@@ -16,4 +16,4 @@ COPY --from=build /app/publish .
 
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "MarketPulse.dll"]
+ENTRYPOINT ["dotnet", "MarketPulse.Api.dll"]

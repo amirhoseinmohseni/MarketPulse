@@ -7,11 +7,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="MarketPulse.http" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Controllers\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MarketPulse.Application\MarketPulse.Application.csproj" />
+    <ProjectReference Include="..\MarketPulse.Infrastructure\MarketPulse.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
