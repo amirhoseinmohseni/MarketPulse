@@ -1,4 +1,7 @@
-﻿using MarketPulse.Infrastructure.Persistence;
+﻿using MarketPulse.Application;
+using MarketPulse.Domain.Repositories;
+using MarketPulse.Infrastructure.Persistence;
+using MarketPulse.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +18,10 @@ namespace MarketPulse.Infrastructure
 
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(connectionString));
+
+            services.AddScoped<IAnalysisRequestRepository, AnalysisRequestRepository>();
+            services.AddScoped<IAnalysisResultRepository, AnalysisResultRepository>();
+            services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
 
             return services;
         }
