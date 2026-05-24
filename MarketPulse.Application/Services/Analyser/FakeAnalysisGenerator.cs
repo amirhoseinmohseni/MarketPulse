@@ -1,6 +1,6 @@
 ﻿using MarketPulse.Domain.Entities;
 
-namespace MarketPulse.Application.Services.Analysis
+namespace MarketPulse.Application.Services.Analyser
 {
     public class FakeAnalysisGenerator : IAnalyser
     {

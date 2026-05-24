@@ -1,4 +1,4 @@
-﻿using MarketPulse.Application.Services.Analysis;
+﻿using MarketPulse.Application.Services.Analyser;
 using MarketPulse.Domain.Entities;
 using MarketPulse.Domain.Enums;
 using MarketPulse.Domain.Repositories;

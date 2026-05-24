@@ -1,4 +1,6 @@
 ﻿using MarketPulse.Application;
+using MarketPulse.Application.Dtos;
+using MarketPulse.Application.Services.AnalysisRequest;
 using MarketPulse.Domain.Entities;
 using MarketPulse.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -10,13 +12,11 @@ namespace MarketPulse.Api.Controllers
     [Route("api/[controller]")]
     public class AnalysisController : ControllerBase
     {
-        private readonly IAnalysisRequestRepository _repository;
-        private readonly IBackgroundTaskQueue _queue;
+        private readonly IAnalysisRequestService _service;
 
-        public AnalysisController(IAnalysisRequestRepository repository, IBackgroundTaskQueue queue)
+        public AnalysisController(IAnalysisRequestService service)
         {
-            _repository = repository;
-            _queue = queue;
+            _service = service;
         }
 
         // POST: api/analysis
@@ -26,27 +26,16 @@ namespace MarketPulse.Api.Controllers
             if (string.IsNullOrWhiteSpace(requestDto.Idea))
                 return BadRequest("Idea cannot be empty.");
 
-            var request = new AnalysisRequest
-            {
-                Id = Guid.NewGuid(),
-                Idea = requestDto.Idea,
-                Status = Domain.Enums.AnalysisStatus.Pending,
-                CreatedAt = DateTime.UtcNow
-            };
+            var id = await _service.CreateAnalysisRequest(requestDto);
 
-            await _repository.AddAsync(request);
-            await _repository.SaveChangesAsync();
-
-            await _queue.QueueBackgroundWorkItemAsync(request.Id);
-
-            return AcceptedAtAction(nameof(Get), new { id = request.Id }, new { request.Id, request.Status });
+            return AcceptedAtAction(nameof(Get), new { id });
         }
 
         // GET: api/analysis/{id}
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> Get(Guid id)
         {
-            var request = await _repository.GetByIdWithResultAsync(id);
+            var request = await _service.GetAnalysisRequestByGuid(id);
 
             if (request == null)
                 return NotFound();
@@ -55,6 +44,5 @@ namespace MarketPulse.Api.Controllers
         }
     }
 
-    public record CreateAnalysisRequestDto(string Idea);
 
 }
