@@ -20,60 +20,59 @@ namespace MarketPulse.Api.Controllers
 
         // POST: api/analysis
         [HttpPost]
-        [ProducesResponseType(typeof(Guid), (int)HttpStatusCode.Accepted)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> Create([FromBody] CreateAnalysisRequestDto requestDto)
         {
+            _logger.LogInformation("Attempting to create a new analysis request. Idea: {IdeaPreview}...",
+                requestDto.Idea?.Substring(0, Math.Min(requestDto.Idea.Length, 20)));
+
             try
             {
-                // Validation - می توانید از FluentValidation هم استفاده کنید
-                if (requestDto == null || string.IsNullOrWhiteSpace(requestDto.Idea))
+                if (string.IsNullOrWhiteSpace(requestDto.Idea))
                 {
+                    _logger.LogWarning("Validation failed: Idea field is empty.");
                     return BadRequest(new { Message = "Idea cannot be empty." });
                 }
 
                 var id = await _service.CreateAnalysisRequest(requestDto);
 
-                // استفاده از CreatedAtAction به جای AcceptedAtAction برای رعایت استانداردهای REST
-                // یا اگر فرآیند طولانی است، همان AcceptedAtAction مناسب است.
+                _logger.LogInformation("Successfully created analysis request with ID: {Id}", id);
+
                 return AcceptedAtAction(nameof(Get), new { id }, new { Id = id });
-            }
-            catch (ArgumentException ex)
-            {
-                _logger.LogWarning(ex, "Validation failed for creating analysis request.");
-                return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An unexpected error occurred while creating analysis request.");
-                return StatusCode(500, new { Message = "An internal error occurred. Please try again later." });
+                _logger.LogError(ex, "An error occurred while creating analysis request.");
+
+                return StatusCode((int)HttpStatusCode.InternalServerError,
+                    new { Message = "An internal error occurred while processing your request." });
             }
         }
 
         // GET: api/analysis/{id}
         [HttpGet("{id:guid}")]
-        [ProducesResponseType(typeof(AnalysisRequestDto), (int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> Get(Guid id)
         {
+            _logger.LogInformation("Fetching analysis request for ID: {Id}", id);
+
             try
             {
                 var request = await _service.GetAnalysisRequestByGuid(id);
 
                 if (request == null)
                 {
-                    _logger.LogWarning("Analysis request with ID {Id} not found.", id);
-                    return NotFound(new { Message = $"Request with ID {id} was not found." });
+                    _logger.LogWarning("Analysis request with ID: {Id} was not found.", id);
+                    return NotFound(new { Message = $"No analysis found for ID: {id}" });
                 }
 
+                _logger.LogInformation("Successfully retrieved analysis request for ID: {Id}", id);
                 return Ok(request);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving analysis request with ID {Id}.", id);
-                return StatusCode(500, new { Message = "An error occurred while fetching the data." });
+                _logger.LogError(ex, "An error occurred while retrieving analysis request with ID: {Id}", id);
+
+                return StatusCode((int)HttpStatusCode.InternalServerError,
+                    new { Message = "An error occurred while fetching the data." });
             }
         }
     }
