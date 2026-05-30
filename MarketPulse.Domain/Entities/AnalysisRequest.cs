@@ -10,5 +10,6 @@ namespace MarketPulse.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? CompletedAt { get; set; }
         public AnalysisResult? Result { get; set; }
+        public List<SearchQuery> SearchQueries { get; set; } = new List<SearchQuery>();
     }
 }
