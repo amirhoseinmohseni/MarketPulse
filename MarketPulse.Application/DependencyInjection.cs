@@ -1,5 +1,6 @@
-﻿using MarketPulse.Application.Services.Analyser;
+using MarketPulse.Application.Services.Analyser;
 using MarketPulse.Application.Services.AnalysisRequest;
+using MarketPulse.Application.Services.SearchQueryGenerator;
 using MarketPulse.Application.Workers;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +13,7 @@ namespace MarketPulse.Application
         {
             services.AddScoped<IAnalyser, FakeAnalysisGenerator>();
             services.AddScoped<IAnalysisRequestService, AnalysisRequestService>();
+            services.AddScoped<ISearchQueryGenerator, AiQueryGenerator>();
 
             services.AddHostedService<AnalysisWorker>();
 
