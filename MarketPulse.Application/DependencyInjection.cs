@@ -14,6 +14,7 @@ namespace MarketPulse.Application
             services.AddScoped<IAnalysisGenerator, AnalysisGenerator>();
             services.AddScoped<IAnalysisRequestService, AnalysisRequestService>();
             services.AddScoped<ISearchQueryGenerator, AiQueryGenerator>();
+            services.AddScoped<ISearchQueryGenerationService, SearchQueryGenerationService>();
 
             services.AddHostedService<AnalysisWorker>();
 

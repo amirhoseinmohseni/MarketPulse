@@ -23,6 +23,7 @@ namespace MarketPulse.Infrastructure
 
             services.AddScoped<IAnalysisRequestRepository, AnalysisRequestRepository>();
             services.AddScoped<IAnalysisResultRepository, AnalysisResultRepository>();
+            services.AddScoped<ISearchQueryRepository, SearchQueryRepository>();
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             services.AddSingleton(CreateOpenRouterOptions(configuration));
             services.AddHttpClient<IAiSearchQueryClient, OpenRouterAiSearchQueryClient>();

@@ -50,6 +50,7 @@ namespace MarketPulse.Application.Workers
                 {
                     var requestRepository = scope.ServiceProvider.GetRequiredService<IAnalysisRequestRepository>();
                     var resultRepository = scope.ServiceProvider.GetRequiredService<IAnalysisResultRepository>();
+                    var searchQueryGenerationService = scope.ServiceProvider.GetRequiredService<global::MarketPulse.Application.Services.SearchQueryGenerator.ISearchQueryGenerationService>();
                     var analyser = scope.ServiceProvider.GetRequiredService<IAnalysisGenerator>();
 
                     try
@@ -71,6 +72,10 @@ namespace MarketPulse.Application.Workers
                         await requestRepository.UpdateAsync(req, stoppingToken);
                         await requestRepository.SaveChangesAsync(stoppingToken);
                         _logger.LogDebug("Status updated to Processing for request {RequestId}.", requestId);
+
+                        _logger.LogInformation("Generating search queries for request {RequestId}...", requestId);
+                        await searchQueryGenerationService.GenerateForAnalysisRequestAsync(req.Id, req.Idea, stoppingToken);
+                        _logger.LogInformation("Search queries generated and saved for request {RequestId}.", requestId);
 
                         _logger.LogInformation("Starting AI analysis for request {RequestId}...", requestId);
                         var result = await analyser.AnalyseRequest(req.Id, req.Idea, stoppingToken);

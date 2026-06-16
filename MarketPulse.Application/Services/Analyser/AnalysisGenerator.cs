@@ -1,21 +1,13 @@
-﻿using MarketPulse.Application.Services.SearchQueryGenerator;
 using MarketPulse.Domain.Entities;
 
 namespace MarketPulse.Application.Services.Analyser
 {
     public class AnalysisGenerator : IAnalysisGenerator
     {
-        private readonly ISearchQueryGenerator _searchQueryGenerator;
-
-        public AnalysisGenerator(ISearchQueryGenerator searchQueryGenerator)
-        {
-            _searchQueryGenerator = searchQueryGenerator;
-        }
-
         public async Task<AnalysisResult> AnalyseRequest(Guid requestId, string idea, CancellationToken ct)
         {
             await Task.Delay(1500, ct); // simulate work
-            var searchQuery = await _searchQueryGenerator.GenerateAsync(idea);
+
             return new AnalysisResult
             {
                 Id = Guid.NewGuid(),
