@@ -24,22 +24,21 @@ namespace MarketPulse.Infrastructure
             services.AddScoped<IAnalysisRequestRepository, AnalysisRequestRepository>();
             services.AddScoped<IAnalysisResultRepository, AnalysisResultRepository>();
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
-            services.AddSingleton(CreateOpenAiOptions(configuration));
-            services.AddSingleton<HttpClient>();
-            services.AddScoped<IAiSearchQueryClient, OpenAiSearchQueryClient>();
+            services.AddSingleton(CreateOpenRouterOptions(configuration));
+            services.AddHttpClient<IAiSearchQueryClient, OpenRouterAiSearchQueryClient>();
 
             return services;
         }
 
-        private static OpenAiOptions CreateOpenAiOptions(IConfiguration configuration)
+        private static OpenRouterOptions CreateOpenRouterOptions(IConfiguration configuration)
         {
-            var section = configuration.GetSection(OpenAiOptions.SectionName);
+            var section = configuration.GetSection(OpenRouterOptions.SectionName);
 
-            return new OpenAiOptions
+            return new OpenRouterOptions
             {
                 ApiKey = section["ApiKey"] ?? string.Empty,
-                Model = section["Model"] ?? "gpt-4o-mini",
-                Endpoint = section["Endpoint"] ?? "https://api.openai.com/v1/chat/completions",
+                Model = section["Model"] ?? "openrouter/auto",
+                Endpoint = section["Endpoint"] ?? "https://openrouter.ai/api/v1/chat/completions",
                 Temperature = double.TryParse(section["Temperature"], out var temperature)
                     ? temperature
                     : 0.2,
