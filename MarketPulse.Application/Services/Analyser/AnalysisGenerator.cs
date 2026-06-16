@@ -3,11 +3,11 @@ using MarketPulse.Domain.Entities;
 
 namespace MarketPulse.Application.Services.Analyser
 {
-    public class FakeAnalysisGenerator : IAnalyser
+    public class AnalysisGenerator : IAnalysisGenerator
     {
         private readonly ISearchQueryGenerator _searchQueryGenerator;
 
-        public FakeAnalysisGenerator(ISearchQueryGenerator searchQueryGenerator)
+        public AnalysisGenerator(ISearchQueryGenerator searchQueryGenerator)
         {
             _searchQueryGenerator = searchQueryGenerator;
         }

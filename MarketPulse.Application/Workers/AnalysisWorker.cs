@@ -50,7 +50,7 @@ namespace MarketPulse.Application.Workers
                 {
                     var requestRepository = scope.ServiceProvider.GetRequiredService<IAnalysisRequestRepository>();
                     var resultRepository = scope.ServiceProvider.GetRequiredService<IAnalysisResultRepository>();
-                    var analyser = scope.ServiceProvider.GetRequiredService<IAnalyser>();
+                    var analyser = scope.ServiceProvider.GetRequiredService<IAnalysisGenerator>();
 
                     try
                     {

@@ -11,7 +11,7 @@ namespace MarketPulse.Application
         public static IServiceCollection AddApplication(
         this IServiceCollection services)
         {
-            services.AddScoped<IAnalyser, FakeAnalysisGenerator>();
+            services.AddScoped<IAnalysisGenerator, AnalysisGenerator>();
             services.AddScoped<IAnalysisRequestService, AnalysisRequestService>();
             services.AddScoped<ISearchQueryGenerator, AiQueryGenerator>();
 
