@@ -13,6 +13,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<AnalysisRequest> AnalysisRequests { get; set; }
     public DbSet<AnalysisResult> AnalysisResults { get; set; }
+    public DbSet<SearchQuery> SearchQueries { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -23,6 +24,11 @@ public class ApplicationDbContext : DbContext
             .HasOne(r => r.Result)
             .WithOne(res => res.Request)
             .HasForeignKey<AnalysisResult>(res => res.AnalysisRequestId);
+
+        modelBuilder.Entity<SearchQuery>()
+                .HasOne(x => x.Request)
+                .WithMany(x => x.SearchQueries)
+                .HasForeignKey(x => x.AnalysisRequestId);
 
     }
 }

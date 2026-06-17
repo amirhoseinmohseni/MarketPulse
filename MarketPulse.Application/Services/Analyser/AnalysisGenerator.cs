@@ -1,8 +1,8 @@
-﻿using MarketPulse.Domain.Entities;
+using MarketPulse.Domain.Entities;
 
 namespace MarketPulse.Application.Services.Analyser
 {
-    public class FakeAnalysisGenerator : IAnalyser
+    public class AnalysisGenerator : IAnalysisGenerator
     {
         public async Task<AnalysisResult> AnalyseRequest(Guid requestId, string idea, CancellationToken ct)
         {
