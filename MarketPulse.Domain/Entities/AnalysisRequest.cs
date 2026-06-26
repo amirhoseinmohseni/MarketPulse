@@ -11,5 +11,6 @@ namespace MarketPulse.Domain.Entities
         public DateTime? CompletedAt { get; set; }
         public AnalysisResult? Result { get; set; }
         public List<SearchQuery> SearchQueries { get; set; } = new List<SearchQuery>();
+        public List<RedditPost> RedditPosts { get; set; } = new List<RedditPost>();
     }
 }
