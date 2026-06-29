@@ -1,4 +1,5 @@
 using MarketPulse.Application;
+using MarketPulse.Application.Services.RedditDataCollection;
 using MarketPulse.Application.Services.SearchQueryGenerator;
 using MarketPulse.Domain.Repositories;
 using MarketPulse.Infrastructure.AI;
@@ -32,6 +33,7 @@ namespace MarketPulse.Infrastructure
             services.AddHttpClient<IAiSearchQueryClient, OpenRouterAiSearchQueryClient>();
             services.AddHttpClient(RedditAccessTokenProvider.HttpClientName);
             services.AddSingleton<IRedditAccessTokenProvider, RedditAccessTokenProvider>();
+            services.AddHttpClient<IRedditClient, RedditClient>();
 
             return services;
         }
