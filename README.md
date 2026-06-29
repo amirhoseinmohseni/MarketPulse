@@ -217,9 +217,29 @@ The following are intentionally excluded from the first version:
 
 ## Start
 
+Create a local environment file from the example:
+
 ```bash
-docker-compose up --build
+cp .env.example .env
 ```
+
+Set the required secrets in `.env`:
+
+```text
+OPENROUTER_API_KEY=
+REDDIT_CLIENT_ID=
+REDDIT_CLIENT_SECRET=
+```
+
+Then start the stack:
+
+```bash
+docker compose up --build
+```
+
+If your Docker installation uses the legacy Compose command, use `docker-compose up --build`.
+
+Docker Compose starts PostgreSQL, waits for it to become healthy, runs EF Core migrations through the `marketpulse.migrator` service, and then starts the API.
 
 API will be available at:
 

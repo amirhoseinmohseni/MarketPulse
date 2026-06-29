@@ -8,6 +8,11 @@ COPY . .
 RUN dotnet restore
 RUN dotnet publish -c Release -o /app/publish
 
+FROM build AS migrator
+RUN dotnet tool install --global dotnet-ef --version 8.0.27
+ENV PATH="${PATH}:/root/.dotnet/tools"
+ENTRYPOINT ["dotnet", "ef", "database", "update", "--project", "MarketPulse.Infrastructure", "--startup-project", "MarketPulse.Api"]
+
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
