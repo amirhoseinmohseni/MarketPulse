@@ -1,8 +1,10 @@
 using MarketPulse.Application;
+using MarketPulse.Application.Services.RedditDataCollection;
 using MarketPulse.Application.Services.SearchQueryGenerator;
 using MarketPulse.Domain.Repositories;
 using MarketPulse.Infrastructure.AI;
 using MarketPulse.Infrastructure.Persistence;
+using MarketPulse.Infrastructure.Reddit;
 using MarketPulse.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -24,9 +26,15 @@ namespace MarketPulse.Infrastructure
             services.AddScoped<IAnalysisRequestRepository, AnalysisRequestRepository>();
             services.AddScoped<IAnalysisResultRepository, AnalysisResultRepository>();
             services.AddScoped<ISearchQueryRepository, SearchQueryRepository>();
+            services.AddScoped<IRedditPostRepository, RedditPostRepository>();
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             services.AddSingleton(CreateOpenRouterOptions(configuration));
+            services.AddSingleton(CreateRedditOptions(configuration));
             services.AddHttpClient<IAiSearchQueryClient, OpenRouterAiSearchQueryClient>();
+            services.AddHttpClient(RedditAccessTokenProvider.HttpClientName);
+            services.AddSingleton<IRedditAccessTokenProvider, RedditAccessTokenProvider>();
+            services.AddHttpClient<IRedditClient, RedditClient>();
+            services.AddScoped<IRedditDataCollector, RedditDataCollector>();
 
             return services;
         }
@@ -46,6 +54,23 @@ namespace MarketPulse.Infrastructure
                 MaxTokens = int.TryParse(section["MaxTokens"], out var maxTokens)
                     ? maxTokens
                     : 800
+            };
+        }
+
+        private static RedditOptions CreateRedditOptions(IConfiguration configuration)
+        {
+            var section = configuration.GetSection(RedditOptions.SectionName);
+
+            return new RedditOptions
+            {
+                ClientId = section["ClientId"] ?? string.Empty,
+                ClientSecret = section["ClientSecret"] ?? string.Empty,
+                UserAgent = section["UserAgent"] ?? "MarketPulse/1.0",
+                AuthUrl = section["AuthUrl"] ?? "https://www.reddit.com/api/v1/access_token",
+                BaseUrl = section["BaseUrl"] ?? "https://oauth.reddit.com",
+                DefaultLimit = int.TryParse(section["DefaultLimit"], out var defaultLimit)
+                    ? defaultLimit
+                    : 25
             };
         }
     }

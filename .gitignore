@@ -336,6 +336,9 @@ ASALocalRun/
 # Local History for Visual Studio
 .localhistory/
 
+# Local environment secrets
+.env
+
 # BeatPulse healthcheck temp database
 healthchecksdb
 src/UI/package-lock.json

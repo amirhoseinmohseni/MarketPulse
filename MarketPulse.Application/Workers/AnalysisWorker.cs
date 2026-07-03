@@ -1,4 +1,5 @@
 ﻿using MarketPulse.Application.Services.Analyser;
+using MarketPulse.Application.Services.RedditDataCollection;
 using MarketPulse.Domain.Enums;
 using MarketPulse.Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +51,9 @@ namespace MarketPulse.Application.Workers
                 {
                     var requestRepository = scope.ServiceProvider.GetRequiredService<IAnalysisRequestRepository>();
                     var resultRepository = scope.ServiceProvider.GetRequiredService<IAnalysisResultRepository>();
+                    var searchQueryRepository = scope.ServiceProvider.GetRequiredService<ISearchQueryRepository>();
                     var searchQueryGenerationService = scope.ServiceProvider.GetRequiredService<global::MarketPulse.Application.Services.SearchQueryGenerator.ISearchQueryGenerationService>();
+                    var redditDataCollector = scope.ServiceProvider.GetRequiredService<IRedditDataCollector>();
                     var analyser = scope.ServiceProvider.GetRequiredService<IAnalysisGenerator>();
 
                     try
@@ -76,6 +79,14 @@ namespace MarketPulse.Application.Workers
                         _logger.LogInformation("Generating search queries for request {RequestId}...", requestId);
                         await searchQueryGenerationService.GenerateForAnalysisRequestAsync(req.Id, req.Idea, stoppingToken);
                         _logger.LogInformation("Search queries generated and saved for request {RequestId}.", requestId);
+
+                        _logger.LogInformation("Loading generated search queries for request {RequestId}...", requestId);
+                        var searchQueries = await searchQueryRepository.GetByAnalysisRequestIdAsync(req.Id, stoppingToken);
+                        _logger.LogInformation("Loaded {SearchQueryCount} search queries for request {RequestId}.", searchQueries.Count, requestId);
+
+                        _logger.LogInformation("Collecting Reddit posts for request {RequestId}...", requestId);
+                        await redditDataCollector.CollectForAnalysisRequestAsync(req.Id, searchQueries, stoppingToken);
+                        _logger.LogInformation("Reddit post collection completed for request {RequestId}.", requestId);
 
                         _logger.LogInformation("Starting AI analysis for request {RequestId}...", requestId);
                         var result = await analyser.AnalyseRequest(req.Id, req.Idea, stoppingToken);
