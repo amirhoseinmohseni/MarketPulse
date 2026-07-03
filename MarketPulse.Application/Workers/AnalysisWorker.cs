@@ -1,5 +1,5 @@
 ﻿using MarketPulse.Application.Services.Analyser;
-using MarketPulse.Application.Services.RedditDataCollection;
+using MarketPulse.Application.Services.DataCollection;
 using MarketPulse.Domain.Enums;
 using MarketPulse.Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,7 +53,7 @@ namespace MarketPulse.Application.Workers
                     var resultRepository = scope.ServiceProvider.GetRequiredService<IAnalysisResultRepository>();
                     var searchQueryRepository = scope.ServiceProvider.GetRequiredService<ISearchQueryRepository>();
                     var searchQueryGenerationService = scope.ServiceProvider.GetRequiredService<global::MarketPulse.Application.Services.SearchQueryGenerator.ISearchQueryGenerationService>();
-                    var redditDataCollector = scope.ServiceProvider.GetRequiredService<IRedditDataCollector>();
+                    var dataCollectionOrchestrator = scope.ServiceProvider.GetRequiredService<IDataCollectionOrchestrator>();
                     var analyser = scope.ServiceProvider.GetRequiredService<IAnalysisGenerator>();
 
                     try
@@ -84,9 +84,9 @@ namespace MarketPulse.Application.Workers
                         var searchQueries = await searchQueryRepository.GetByAnalysisRequestIdAsync(req.Id, stoppingToken);
                         _logger.LogInformation("Loaded {SearchQueryCount} search queries for request {RequestId}.", searchQueries.Count, requestId);
 
-                        _logger.LogInformation("Collecting Reddit posts for request {RequestId}...", requestId);
-                        await redditDataCollector.CollectForAnalysisRequestAsync(req.Id, searchQueries, stoppingToken);
-                        _logger.LogInformation("Reddit post collection completed for request {RequestId}.", requestId);
+                        _logger.LogInformation("Collecting market data for request {RequestId}...", requestId);
+                        var collectionResults = await dataCollectionOrchestrator.CollectAsync(req.Id, req.Idea, searchQueries, stoppingToken);
+                        _logger.LogInformation("Market data collection completed for request {RequestId}. Collector results: {CollectorResultCount}.", requestId, collectionResults.Count);
 
                         _logger.LogInformation("Starting AI analysis for request {RequestId}...", requestId);
                         var result = await analyser.AnalyseRequest(req.Id, req.Idea, stoppingToken);

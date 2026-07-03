@@ -1,4 +1,5 @@
 using MarketPulse.Application;
+using MarketPulse.Application.Services.DataCollection;
 using MarketPulse.Application.Services.RedditDataCollection;
 using MarketPulse.Application.Services.SearchQueryGenerator;
 using MarketPulse.Domain.Repositories;
@@ -29,6 +30,7 @@ namespace MarketPulse.Infrastructure
             services.AddScoped<IRedditPostRepository, RedditPostRepository>();
             services.AddScoped<ICollectedMarketItemRepository, CollectedMarketItemRepository>();
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+            services.AddSingleton(CreateDataCollectorOptions(configuration));
             services.AddSingleton(CreateOpenRouterOptions(configuration));
             services.AddSingleton(CreateRedditOptions(configuration));
             services.AddHttpClient<IAiSearchQueryClient, OpenRouterAiSearchQueryClient>();
@@ -56,6 +58,26 @@ namespace MarketPulse.Infrastructure
                     ? maxTokens
                     : 800
             };
+        }
+
+        private static DataCollectorOptions CreateDataCollectorOptions(IConfiguration configuration)
+        {
+            var section = configuration.GetSection(DataCollectorOptions.SectionName);
+            var sourcesSection = section.GetSection("Sources");
+            var options = new DataCollectorOptions
+            {
+                FailFast = bool.TryParse(section["FailFast"], out var failFast) && failFast
+            };
+
+            foreach (var sourceSection in sourcesSection.GetChildren())
+            {
+                options.Sources[sourceSection.Key] = new DataCollectorSourceOptions
+                {
+                    Enabled = bool.TryParse(sourceSection["Enabled"], out var enabled) && enabled
+                };
+            }
+
+            return options;
         }
 
         private static RedditOptions CreateRedditOptions(IConfiguration configuration)
