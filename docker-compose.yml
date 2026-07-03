@@ -16,6 +16,9 @@ services:
       DataCollectors__FailFast: ${DATA_COLLECTORS_FAIL_FAST:-false}
       DataCollectors__Sources__Reddit__Enabled: ${DATA_COLLECTORS_REDDIT_ENABLED:-false}
       DataCollectors__Sources__HackerNews__Enabled: ${DATA_COLLECTORS_HACKERNEWS_ENABLED:-true}
+      HackerNews__BaseUrl: ${HACKERNEWS_BASE_URL:-https://hn.algolia.com/api/v1}
+      HackerNews__DefaultLimit: ${HACKERNEWS_DEFAULT_LIMIT:-20}
+      HackerNews__Tags: ${HACKERNEWS_TAGS:-story}
       Reddit__ClientId: ${REDDIT_CLIENT_ID:-}
       Reddit__ClientSecret: ${REDDIT_CLIENT_SECRET:-}
       Reddit__UserAgent: ${REDDIT_USER_AGENT:-MarketPulse/1.0}

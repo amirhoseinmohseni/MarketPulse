@@ -1,9 +1,11 @@
 using MarketPulse.Application;
 using MarketPulse.Application.Services.DataCollection;
+using MarketPulse.Application.Services.HackerNewsDataCollection;
 using MarketPulse.Application.Services.RedditDataCollection;
 using MarketPulse.Application.Services.SearchQueryGenerator;
 using MarketPulse.Domain.Repositories;
 using MarketPulse.Infrastructure.AI;
+using MarketPulse.Infrastructure.HackerNews;
 using MarketPulse.Infrastructure.Persistence;
 using MarketPulse.Infrastructure.Reddit;
 using MarketPulse.Infrastructure.Repositories;
@@ -31,12 +33,15 @@ namespace MarketPulse.Infrastructure
             services.AddScoped<ICollectedMarketItemRepository, CollectedMarketItemRepository>();
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             services.AddSingleton(CreateDataCollectorOptions(configuration));
+            services.AddSingleton(CreateHackerNewsOptions(configuration));
             services.AddSingleton(CreateOpenRouterOptions(configuration));
             services.AddSingleton(CreateRedditOptions(configuration));
             services.AddHttpClient<IAiSearchQueryClient, OpenRouterAiSearchQueryClient>();
+            services.AddHttpClient<IHackerNewsClient, HackerNewsClient>();
             services.AddHttpClient(RedditAccessTokenProvider.HttpClientName);
             services.AddSingleton<IRedditAccessTokenProvider, RedditAccessTokenProvider>();
             services.AddHttpClient<IRedditClient, RedditClient>();
+            services.AddScoped<IDataCollector, HackerNewsDataCollector>();
             services.AddScoped<IDataCollector, RedditDataCollector>();
 
             return services;
@@ -57,6 +62,20 @@ namespace MarketPulse.Infrastructure
                 MaxTokens = int.TryParse(section["MaxTokens"], out var maxTokens)
                     ? maxTokens
                     : 800
+            };
+        }
+
+        private static HackerNewsOptions CreateHackerNewsOptions(IConfiguration configuration)
+        {
+            var section = configuration.GetSection(HackerNewsOptions.SectionName);
+
+            return new HackerNewsOptions
+            {
+                BaseUrl = section["BaseUrl"] ?? "https://hn.algolia.com/api/v1",
+                DefaultLimit = int.TryParse(section["DefaultLimit"], out var defaultLimit)
+                    ? defaultLimit
+                    : 20,
+                Tags = section["Tags"] ?? "story"
             };
         }
 
