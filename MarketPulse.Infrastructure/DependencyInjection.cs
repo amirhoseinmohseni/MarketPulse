@@ -27,6 +27,7 @@ namespace MarketPulse.Infrastructure
             services.AddScoped<IAnalysisResultRepository, AnalysisResultRepository>();
             services.AddScoped<ISearchQueryRepository, SearchQueryRepository>();
             services.AddScoped<IRedditPostRepository, RedditPostRepository>();
+            services.AddScoped<ICollectedMarketItemRepository, CollectedMarketItemRepository>();
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             services.AddSingleton(CreateOpenRouterOptions(configuration));
             services.AddSingleton(CreateRedditOptions(configuration));
