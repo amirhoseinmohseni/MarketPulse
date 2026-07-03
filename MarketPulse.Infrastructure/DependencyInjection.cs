@@ -37,7 +37,7 @@ namespace MarketPulse.Infrastructure
             services.AddHttpClient(RedditAccessTokenProvider.HttpClientName);
             services.AddSingleton<IRedditAccessTokenProvider, RedditAccessTokenProvider>();
             services.AddHttpClient<IRedditClient, RedditClient>();
-            services.AddScoped<IRedditDataCollector, RedditDataCollector>();
+            services.AddScoped<IDataCollector, RedditDataCollector>();
 
             return services;
         }

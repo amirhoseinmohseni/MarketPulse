@@ -1,40 +1,47 @@
+using MarketPulse.Application.Services.DataCollection;
 using MarketPulse.Application.Services.RedditDataCollection;
 using MarketPulse.Domain.Entities;
 using MarketPulse.Domain.Repositories;
 
 namespace MarketPulse.Infrastructure.Reddit
 {
-    public sealed class RedditDataCollector : IRedditDataCollector
+    public sealed class RedditDataCollector : IDataCollector
     {
+        public string SourceName => "Reddit";
+
         private readonly IRedditClient _redditClient;
-        private readonly IRedditPostRepository _redditPostRepository;
+        private readonly ICollectedMarketItemRepository _collectedMarketItemRepository;
         private readonly RedditOptions _options;
 
         public RedditDataCollector(
             IRedditClient redditClient,
-            IRedditPostRepository redditPostRepository,
+            ICollectedMarketItemRepository collectedMarketItemRepository,
             RedditOptions options)
         {
             _redditClient = redditClient;
-            _redditPostRepository = redditPostRepository;
+            _collectedMarketItemRepository = collectedMarketItemRepository;
             _options = options;
         }
 
-        public async Task CollectForAnalysisRequestAsync(
-            Guid analysisRequestId,
-            IReadOnlyCollection<SearchQuery> searchQueries,
+        public async Task<DataCollectionResult> CollectAsync(
+            DataCollectionContext context,
             CancellationToken cancellationToken = default)
         {
-            if (searchQueries.Count == 0)
+            if (context.SearchQueries.Count == 0)
             {
-                return;
+                return new DataCollectionResult
+                {
+                    SourceName = SourceName,
+                    ItemsCollected = 0,
+                    Succeeded = true
+                };
             }
 
             var collectedAt = DateTime.UtcNow;
             var seenPostIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var redditPosts = new List<RedditPost>();
+            var collectedItems = new List<CollectedMarketItem>();
 
-            foreach (var searchQuery in searchQueries)
+            foreach (var searchQuery in context.SearchQueries)
             {
                 var results = await _redditClient.SearchPostsAsync(
                     new RedditPostSearchRequest
@@ -48,23 +55,24 @@ namespace MarketPulse.Infrastructure.Reddit
                 {
                     if (string.IsNullOrWhiteSpace(result.RedditPostId)
                         || !seenPostIds.Add(result.RedditPostId)
-                        || await _redditPostRepository.ExistsForAnalysisRequestAsync(
-                            analysisRequestId,
+                        || await _collectedMarketItemRepository.ExistsForAnalysisRequestAsync(
+                            context.AnalysisRequestId,
+                            SourceName,
                             result.RedditPostId,
                             cancellationToken))
                     {
                         continue;
                     }
 
-                    redditPosts.Add(new RedditPost
+                    collectedItems.Add(new CollectedMarketItem
                     {
                         Id = Guid.NewGuid(),
-                        AnalysisRequestId = analysisRequestId,
+                        AnalysisRequestId = context.AnalysisRequestId,
                         SearchQueryId = searchQuery.Id,
-                        RedditPostId = result.RedditPostId,
-                        Subreddit = result.Subreddit,
+                        Source = SourceName,
+                        ExternalId = result.RedditPostId,
                         Title = result.Title,
-                        SelfText = result.SelfText,
+                        Content = result.SelfText,
                         Url = result.Url,
                         Permalink = result.Permalink,
                         Score = result.Score,
@@ -75,13 +83,18 @@ namespace MarketPulse.Infrastructure.Reddit
                 }
             }
 
-            if (redditPosts.Count == 0)
+            if (collectedItems.Count > 0)
             {
-                return;
+                await _collectedMarketItemRepository.AddRangeAsync(collectedItems, cancellationToken);
+                await _collectedMarketItemRepository.SaveChangesAsync(cancellationToken);
             }
 
-            await _redditPostRepository.AddRangeAsync(redditPosts, cancellationToken);
-            await _redditPostRepository.SaveChangesAsync(cancellationToken);
+            return new DataCollectionResult
+            {
+                SourceName = SourceName,
+                ItemsCollected = collectedItems.Count,
+                Succeeded = true
+            };
         }
     }
 }
