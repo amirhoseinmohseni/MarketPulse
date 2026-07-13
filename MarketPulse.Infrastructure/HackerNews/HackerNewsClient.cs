@@ -80,17 +80,24 @@ namespace MarketPulse.Infrastructure.HackerNews
             var title = !string.IsNullOrWhiteSpace(hit.Title)
                 ? hit.Title
                 : hit.StoryTitle ?? string.Empty;
+            var content = !string.IsNullOrWhiteSpace(hit.StoryText)
+                ? hit.StoryText
+                : hit.CommentText;
+            var createdUtc = hit.CreatedAt
+                ?? (hit.CreatedAtUnix.HasValue
+                    ? DateTimeOffset.FromUnixTimeSeconds(hit.CreatedAtUnix.Value).UtcDateTime
+                    : null);
 
             return new HackerNewsSearchResult
             {
                 ExternalId = hit.ObjectId,
                 Title = title,
-                Content = hit.CommentText,
+                Content = content,
                 Url = !string.IsNullOrWhiteSpace(hit.Url) ? hit.Url : hit.StoryUrl,
                 Permalink = $"https://news.ycombinator.com/item?id={hit.ObjectId}",
                 Score = hit.Points,
                 CommentCount = hit.CommentCount,
-                CreatedUtc = hit.CreatedAt
+                CreatedUtc = createdUtc
             };
         }
     }

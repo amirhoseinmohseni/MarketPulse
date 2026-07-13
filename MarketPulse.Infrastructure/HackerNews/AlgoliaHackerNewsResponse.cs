@@ -28,6 +28,9 @@ namespace MarketPulse.Infrastructure.HackerNews
         [JsonPropertyName("comment_text")]
         public string? CommentText { get; init; }
 
+        [JsonPropertyName("story_text")]
+        public string? StoryText { get; init; }
+
         [JsonPropertyName("points")]
         public int? Points { get; init; }
 
@@ -36,5 +39,8 @@ namespace MarketPulse.Infrastructure.HackerNews
 
         [JsonPropertyName("created_at")]
         public DateTime? CreatedAt { get; init; }
+
+        [JsonPropertyName("created_at_i")]
+        public long? CreatedAtUnix { get; init; }
     }
 }
