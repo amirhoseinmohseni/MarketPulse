@@ -1,11 +1,12 @@
 using MarketPulse.Domain.Entities;
 
-namespace MarketPulse.Application.Services.RedditDataCollection
+namespace MarketPulse.Application.Services.DataCollection
 {
-    public interface IRedditDataCollector
+    public interface IDataCollectionOrchestrator
     {
-        Task CollectForAnalysisRequestAsync(
+        Task<IReadOnlyList<DataCollectionResult>> CollectAsync(
             Guid analysisRequestId,
+            string idea,
             IReadOnlyCollection<SearchQuery> searchQueries,
             CancellationToken cancellationToken = default);
     }

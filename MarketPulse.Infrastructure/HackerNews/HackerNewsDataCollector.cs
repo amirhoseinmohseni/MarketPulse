@@ -1,24 +1,24 @@
 using MarketPulse.Application.Services.DataCollection;
-using MarketPulse.Application.Services.RedditDataCollection;
+using MarketPulse.Application.Services.HackerNewsDataCollection;
 using MarketPulse.Domain.Entities;
 using MarketPulse.Domain.Repositories;
 
-namespace MarketPulse.Infrastructure.Reddit
+namespace MarketPulse.Infrastructure.HackerNews
 {
-    public sealed class RedditDataCollector : IDataCollector
+    public sealed class HackerNewsDataCollector : IDataCollector
     {
-        public string SourceName => "Reddit";
+        public string SourceName => "HackerNews";
 
-        private readonly IRedditClient _redditClient;
+        private readonly IHackerNewsClient _hackerNewsClient;
         private readonly ICollectedMarketItemRepository _collectedMarketItemRepository;
-        private readonly RedditOptions _options;
+        private readonly HackerNewsOptions _options;
 
-        public RedditDataCollector(
-            IRedditClient redditClient,
+        public HackerNewsDataCollector(
+            IHackerNewsClient hackerNewsClient,
             ICollectedMarketItemRepository collectedMarketItemRepository,
-            RedditOptions options)
+            HackerNewsOptions options)
         {
-            _redditClient = redditClient;
+            _hackerNewsClient = hackerNewsClient;
             _collectedMarketItemRepository = collectedMarketItemRepository;
             _options = options;
         }
@@ -38,13 +38,13 @@ namespace MarketPulse.Infrastructure.Reddit
             }
 
             var collectedAt = DateTime.UtcNow;
-            var seenPostIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seenItemIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var collectedItems = new List<CollectedMarketItem>();
 
             foreach (var searchQuery in context.SearchQueries)
             {
-                var results = await _redditClient.SearchPostsAsync(
-                    new RedditPostSearchRequest
+                var results = await _hackerNewsClient.SearchAsync(
+                    new HackerNewsSearchRequest
                     {
                         Query = searchQuery.Query,
                         Limit = _options.DefaultLimit
@@ -53,12 +53,12 @@ namespace MarketPulse.Infrastructure.Reddit
 
                 foreach (var result in results)
                 {
-                    if (string.IsNullOrWhiteSpace(result.RedditPostId)
-                        || !seenPostIds.Add(result.RedditPostId)
+                    if (string.IsNullOrWhiteSpace(result.ExternalId)
+                        || !seenItemIds.Add(result.ExternalId)
                         || await _collectedMarketItemRepository.ExistsForAnalysisRequestAsync(
                             context.AnalysisRequestId,
                             SourceName,
-                            result.RedditPostId,
+                            result.ExternalId,
                             cancellationToken))
                     {
                         continue;
@@ -70,9 +70,9 @@ namespace MarketPulse.Infrastructure.Reddit
                         AnalysisRequestId = context.AnalysisRequestId,
                         SearchQueryId = searchQuery.Id,
                         Source = SourceName,
-                        ExternalId = result.RedditPostId,
+                        ExternalId = result.ExternalId,
                         Title = result.Title,
-                        Content = result.SelfText,
+                        Content = result.Content,
                         Url = result.Url,
                         Permalink = result.Permalink,
                         Score = result.Score,

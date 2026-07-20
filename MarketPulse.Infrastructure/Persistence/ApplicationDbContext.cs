@@ -15,6 +15,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<AnalysisResult> AnalysisResults { get; set; }
     public DbSet<SearchQuery> SearchQueries { get; set; }
     public DbSet<RedditPost> RedditPosts { get; set; }
+    public DbSet<CollectedMarketItem> CollectedMarketItems { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -43,6 +44,20 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<RedditPost>()
             .HasIndex(x => new { x.AnalysisRequestId, x.RedditPostId })
+            .IsUnique();
+
+        modelBuilder.Entity<CollectedMarketItem>()
+            .HasOne(x => x.Request)
+            .WithMany(x => x.CollectedMarketItems)
+            .HasForeignKey(x => x.AnalysisRequestId);
+
+        modelBuilder.Entity<CollectedMarketItem>()
+            .HasOne(x => x.SearchQuery)
+            .WithMany()
+            .HasForeignKey(x => x.SearchQueryId);
+
+        modelBuilder.Entity<CollectedMarketItem>()
+            .HasIndex(x => new { x.AnalysisRequestId, x.Source, x.ExternalId })
             .IsUnique();
 
     }

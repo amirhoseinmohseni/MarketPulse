@@ -29,19 +29,29 @@ namespace MarketPulse.Application.Services.SearchQueryGenerator
         private static AiSearchQueryPrompt BuildPrompt(string idea)
         {
             const string systemPrompt = """
-                You generate practical web search queries for validating startup and product ideas.
+                You generate concise, source-neutral keyword search queries for validating startup and product ideas.
+                The queries must work well with simple search APIs such as Hacker News Algolia, not only Google-style web search.
                 Return only valid JSON. Do not include markdown, explanations, or comments.
                 """;
 
             var userPrompt = $$"""
-                Generate 8 to 12 search queries for this product idea:
+                Generate 8 to 12 source-neutral search queries for this product idea:
                 "{{idea.Trim()}}"
 
                 Cover these categories:
-                - Problem: searches about pain points, user complaints, unmet needs
-                - Competitor: searches to discover direct or indirect competitors
-                - Solution: searches about existing solutions, alternatives, tools, products
-                - Discussion: searches for real user discussions, forums, Reddit, communities
+                - Problem: short keyword queries about pain points, unmet needs, failure modes
+                - Competitor: short keyword queries to discover direct or indirect competitors
+                - Solution: short keyword queries about existing solutions, alternatives, tools, products
+                - Discussion: short keyword queries likely to match product discussions and technical conversations
+
+                Query writing rules:
+                - Prefer concise topic or keyword queries, usually 2 to 5 words.
+                - Make queries source-neutral and suitable for search APIs such as Hacker News Algolia.
+                - Do not write full sentences.
+                - Do not use Google search operators or syntax: site:, intitle:, inurl:, OR, quoted phrases.
+                - Do not include source names unless they are genuinely part of the product idea: reddit, subreddit, forum, hacker news, product hunt.
+                - Avoid long phrases such as "best alternatives to", "user complaints about", "pain points with".
+                - Prefer core concepts, user segments, workflows, technologies, and problem keywords.
 
                 Return this JSON shape:
                 {
