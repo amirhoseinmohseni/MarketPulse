@@ -6,6 +6,15 @@ This project is a .NET Clean Architecture application called MarketPulse.
 
 The application analyzes product or startup ideas by generating search queries, collecting public market data, and producing useful insights.
 
+Before starting a non-trivial task, read the relevant project context documents:
+
+- `docs/ai/PROJECT-CONTEXT.md`
+- `docs/ai/ARCHITECTURE.md`
+- `docs/ai/CURRENT-STATE.md`
+- `docs/ai/HANDOFF.md`
+
+Use `docs/ai/TASKS.md` for planned work and `docs/ai/DECISIONS.md` for recorded architectural decisions. Keep `docs/ai/HANDOFF.md` current when work is paused or handed off to another machine or agent.
+
 ## Architecture rules
 
 - Follow the existing Clean Architecture structure.
