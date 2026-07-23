@@ -226,10 +226,15 @@ cp .env.example .env
 Set the required secrets in `.env`:
 
 ```text
-OPENROUTER_API_KEY=
+POSTGRES_DB=marketpulse
+POSTGRES_USER=marketpulse
+POSTGRES_PASSWORD=replace-with-a-strong-local-password
+OPENROUTER_API_KEY=replace-with-your-openrouter-api-key
 REDDIT_CLIENT_ID=
 REDDIT_CLIENT_SECRET=
 ```
+
+Do not commit `.env`. PostgreSQL credentials, the OpenRouter API key, and optional Reddit credentials are read from environment variables.
 
 Then start the stack:
 

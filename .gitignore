@@ -350,3 +350,11 @@ src/UI/package-lock.json
 -e
 docker
 dotnet
+
+# Local environment variables and secrets
+.env
+.env.*
+!.env.example
+secrets/
+appsettings.Local.json
+appsettings.Secrets.json
