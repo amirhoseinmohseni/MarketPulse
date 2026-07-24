@@ -27,6 +27,21 @@ public class ApplicationDbContextModelTests
     }
 
     [Fact]
+    public void AnalysisResultMapping_EnforcesOneResultPerRequest()
+    {
+        using var dbContext = CreateDbContext();
+        var entity = dbContext.Model.FindEntityType(typeof(AnalysisResult));
+
+        Assert.NotNull(entity);
+        var requestForeignKey = entity.GetForeignKeys()
+            .Single(x => x.PrincipalEntityType.ClrType == typeof(AnalysisRequest));
+
+        Assert.True(requestForeignKey.IsUnique);
+        Assert.True(requestForeignKey.IsRequired);
+        Assert.Equal(DeleteBehavior.Cascade, requestForeignKey.DeleteBehavior);
+    }
+
+    [Fact]
     public void InsightMapping_PreservesAUniquePositionWithinEachCategory()
     {
         using var dbContext = CreateDbContext();
@@ -88,6 +103,8 @@ public class ApplicationDbContextModelTests
         Assert.Contains("CK_AnalysisInsights_Position_NonNegative", script);
         Assert.Contains("CK_AnalysisInsights_Type_Range", script);
         Assert.Contains("FK_AnalysisEvidences_CollectedMarketItems_CollectedMarketItemId", script);
+        Assert.Contains("IX_AnalysisResults_AnalysisRequestId", script);
+        Assert.Contains("UNIQUE", script);
         Assert.Contains("ON DELETE RESTRICT", script);
     }
 }

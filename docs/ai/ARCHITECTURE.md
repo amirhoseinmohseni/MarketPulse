@@ -20,7 +20,7 @@ Important domain entities include `AnalysisRequest`, `AnalysisResult`, `SearchQu
 
 ### Application
 
-Contains application services, DTOs, interfaces, data-collection orchestration, search-query generation, and the `AnalysisWorker`. It coordinates use cases without knowing provider-specific implementation details.
+Contains application services, DTOs, interfaces, data-collection orchestration, search-query generation, Market Insight validation, `AnalysisRequestProcessor`, and `AnalysisWorker`. It coordinates use cases without knowing provider-specific implementation details.
 
 ### Infrastructure
 
@@ -42,7 +42,7 @@ The arrows show project references. Infrastructure implements contracts defined 
 
 ## Current request flow
 
-`POST /api/analysis` calls `IAnalysisRequestService`, persists a pending request, and queues its ID. `AnalysisWorker` creates a scope, loads repositories and services, generates queries, collects enabled sources, generates an analysis result, and updates request status. `GET /api/analysis/{id}` reads the request with its result and maps it to a DTO.
+`POST /api/analysis` calls `IAnalysisRequestService`, persists a pending request, and queues its ID. `AnalysisWorker` creates a scope and delegates the queue item to `IAnalysisRequestProcessor`. The processor claims the request, reuses or generates search queries, runs enabled collectors, invokes `IAnalysisGenerator`, and asks `IAnalysisProcessingStateStore` to atomically persist the result graph and Completed status. `GET /api/analysis/{id}` reads the result with insight/evidence/item relationships and maps database metadata to the API contract.
 
 ## Adding new features
 
@@ -56,5 +56,6 @@ The arrows show project references. Infrastructure implements contracts defined 
 
 - OpenRouter access belongs in Infrastructure.
 - Application depends on `IAiSearchQueryClient`, not `HttpClient` details or OpenRouter types.
+- Application depends on `IAiMarketInsightClient`; the worker depends only on `IAnalysisRequestProcessor`.
 - API controllers must not call OpenRouter directly.
 - API keys, endpoints, models, temperature, and token limits must come from configuration or environment variables.

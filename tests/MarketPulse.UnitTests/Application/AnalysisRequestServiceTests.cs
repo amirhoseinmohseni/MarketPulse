@@ -74,6 +74,9 @@ public class AnalysisRequestServiceTests
         Assert.Equal(item.Id, mappedEvidence.CollectedMarketItemId);
         Assert.Equal(item.Source, mappedEvidence.Source);
         Assert.Equal(item.Title, mappedEvidence.Title);
+        Assert.Equal(item.Url, mappedEvidence.Url);
+        Assert.Equal(item.Permalink, mappedEvidence.Permalink);
+        Assert.Equal(strength.Text, mappedEvidence.Reason);
     }
 
     private sealed class StubAnalysisRequestRepository(AnalysisRequest request)

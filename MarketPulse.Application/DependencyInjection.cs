@@ -1,4 +1,5 @@
 using MarketPulse.Application.Services.Analyser;
+using MarketPulse.Application.Services.AnalysisProcessing;
 using MarketPulse.Application.Services.AnalysisRequest;
 using MarketPulse.Application.Services.DataCollection;
 using MarketPulse.Application.Services.SearchQueryGenerator;
@@ -20,11 +21,13 @@ namespace MarketPulse.Application
             services.AddScoped<IMarketInsightPromptBuilder, MarketInsightPromptBuilder>();
             services.AddScoped<IMarketInsightResponseParser, MarketInsightResponseParser>();
             services.AddScoped<IAnalysisGenerator, AnalysisGenerator>();
+            services.AddScoped<IAnalysisRequestProcessor, AnalysisRequestProcessor>();
             services.AddScoped<IAnalysisRequestService, AnalysisRequestService>();
             services.AddScoped<ISearchQueryGenerator, AiQueryGenerator>();
             services.AddScoped<ISearchQueryGenerationService, SearchQueryGenerationService>();
             services.AddScoped<IDataCollectorFactory, DataCollectorFactory>();
             services.AddScoped<IDataCollectionOrchestrator, DataCollectionOrchestrator>();
+            services.AddSingleton(TimeProvider.System);
 
             services.AddHostedService<AnalysisWorker>();
 

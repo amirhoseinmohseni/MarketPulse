@@ -1,5 +1,6 @@
 using MarketPulse.Application;
 using MarketPulse.Application.Services.Analyser;
+using MarketPulse.Application.Services.AnalysisProcessing;
 using MarketPulse.Application.Services.DataCollection;
 using MarketPulse.Application.Services.HackerNewsDataCollection;
 using MarketPulse.Application.Services.RedditDataCollection;
@@ -33,6 +34,7 @@ namespace MarketPulse.Infrastructure
             services.AddScoped<ISearchQueryRepository, SearchQueryRepository>();
             services.AddScoped<IRedditPostRepository, RedditPostRepository>();
             services.AddScoped<ICollectedMarketItemRepository, CollectedMarketItemRepository>();
+            services.AddScoped<IAnalysisProcessingStateStore, AnalysisProcessingStateStore>();
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             services.AddSingleton(CreateDataCollectorOptions(configuration));
             services.AddSingleton(CreateHackerNewsOptions(configuration));

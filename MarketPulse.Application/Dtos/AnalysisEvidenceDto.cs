@@ -11,5 +11,7 @@ namespace MarketPulse.Application.Dtos
         public string? Url { get; set; }
 
         public string? Permalink { get; set; }
+
+        public string Reason { get; set; } = string.Empty;
     }
 }

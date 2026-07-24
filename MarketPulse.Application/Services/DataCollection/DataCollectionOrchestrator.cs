@@ -50,6 +50,10 @@ namespace MarketPulse.Application.Services.DataCollection
                         result.Succeeded,
                         result.ItemsCollected);
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Data collector {SourceName} failed for request {RequestId}.", collector.SourceName, analysisRequestId);

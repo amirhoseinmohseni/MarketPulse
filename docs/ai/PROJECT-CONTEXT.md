@@ -2,7 +2,7 @@
 
 ## Purpose
 
-MarketPulse is an AI-assisted product validation and market intelligence backend. A user submits a product or startup idea, and the system creates search queries, collects public market signals, and stores an analysis request and result. The current final analysis result is simulated; see `CURRENT-STATE.md`.
+MarketPulse is an AI-assisted product validation and market intelligence backend. A user submits a product or startup idea, and the system creates search queries, collects public market signals, and stores an evidence-grounded Market Insight result.
 
 ## Problem
 
@@ -29,6 +29,9 @@ The currently implemented user flow is:
 - ASP.NET Core API for creating and reading analysis requests.
 - Background analysis processing through an in-process queue and hosted worker.
 - AI search-query generation through an Application abstraction and OpenRouter Infrastructure implementation.
+- Evidence-grounded Market Insight generation through a provider-neutral Application pipeline and OpenRouter Infrastructure implementation.
+- Deterministic signal-quality enforcement and evidence-ID validation.
+- Atomic final result/evidence/request completion persistence.
 - Configurable data collector pipeline.
 - Hacker News Algolia collector.
 - Reddit client and collector implementation, currently disabled by configuration.

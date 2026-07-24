@@ -38,6 +38,24 @@
 - **Reason:** Rate limiting and provider unavailability are transient, while authentication and validation failures need operator action. Provider bodies and prompts may contain sensitive collected data.
 - **Consequence:** Retry is cancellation-aware and finite; other HTTP errors fail immediately with only status and sanitized error-code metadata.
 
+### Worker delegates to an Application processor
+
+- **Decision:** Keep queue consumption in `AnalysisWorker` and move per-request orchestration into scoped `IAnalysisRequestProcessor`.
+- **Reason:** Status transitions, failure handling, cancellation, and idempotency need focused tests without running a hosted-service loop.
+- **Consequence:** The worker resolves one Application processor per queue item and has no direct dependency on AI clients, OpenRouter, repositories, or collectors.
+
+### Atomic and idempotent final completion
+
+- **Decision:** Infrastructure owns `IAnalysisProcessingStateStore`; it locks/rechecks the request and saves the complete result graph plus Completed status in one transaction.
+- **Reason:** A request must never expose Completed without its result/evidence, and redelivery must not create a second result.
+- **Consequence:** The one-to-one database relationship remains the final uniqueness guard, evidence ownership is revalidated, and failure-state updates clear rolled-back tracked entities first.
+
+### Evidence reason is derived, not provider metadata
+
+- **Decision:** The API `Reason` field is derived from persisted insight text supporting a collected item; source/title/URL/permalink are read from `CollectedMarketItem`.
+- **Reason:** The phase 1 schema stores evidence relationships but no independent provider-authored reason field.
+- **Consequence:** No migration is required, and the API never trusts provider-returned source metadata.
+
 ### Background analysis processing
 
 - **Decision:** Queue analysis request IDs and process them with the hosted `AnalysisWorker`.

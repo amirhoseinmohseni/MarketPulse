@@ -1,408 +1,231 @@
 # MarketPulse
 
-AI-powered product validation and market intelligence platform.
+MarketPulse is a .NET 8 backend for validating product and startup ideas with collected public market signals.
 
-MarketPulse helps founders, indie hackers, and product teams evaluate product ideas using real-world market signals gathered from online platforms such as Reddit and Product Hunt.
+A user submits an idea, the API queues it for background processing, search queries are generated, enabled collectors gather relevant discussions, and an evidence-grounded Market Insight result is generated through OpenRouter.
 
-The platform analyzes discussions, reviews, trends, and sentiment to generate actionable insights about market demand, competition, risks, and opportunities.
+## Processing flow
 
----
+```text
+POST /api/analysis
+        |
+        v
+Pending AnalysisRequest
+        |
+        v
+In-process background queue
+        |
+        v
+AnalysisWorker -> IAnalysisRequestProcessor
+        |
+        +--> generate/reuse search queries
+        +--> collect market items
+        +--> IAnalysisGenerator
+                |
+                +--> bounded deterministic input
+                +--> signal-quality evaluation
+                +--> OpenRouter structured output
+                +--> response/evidence validation
+        |
+        v
+Atomic AnalysisResult + Evidence + Completed status
+```
 
-# Vision
+The worker depends only on the Application processor. OpenRouter is implemented in Infrastructure behind `IAiMarketInsightClient`.
 
-Launching a product without validating the market is expensive and risky.
+## Market Insight output
 
-MarketPulse aims to automate early-stage product research by transforming public market discussions into structured business intelligence.
-
-Instead of manually searching forums, reading reviews, and comparing competitors, users can submit a product idea and receive an AI-assisted market validation report.
-
----
-
-# MVP Goals
-
-The first version focuses on:
-
-- Product idea analysis
-- Sentiment analysis
-- Competitor detection
-- Pain point extraction
-- Simple market viability scoring
-- AI-generated summaries
-
----
-
-# Example
-
-## Input
+`GET /api/analysis/{id}` returns the request status and, when completed, a structured result:
 
 ```json
+{
+  "id": "analysis-request-id",
+  "status": 2,
+  "result": {
+    "marketScore": 64,
+    "signalStrength": 1,
+    "summary": "Evidence-grounded market summary.",
+    "strengths": [
+      {
+        "id": "insight-id",
+        "text": "Users repeatedly describe the target problem.",
+        "evidenceIds": ["collected-market-item-id"]
+      }
+    ],
+    "weaknesses": [],
+    "opportunities": [],
+    "risks": [],
+    "evidence": [
+      {
+        "collectedMarketItemId": "collected-market-item-id",
+        "source": "HackerNews",
+        "title": "Discussion title from the database",
+        "url": "https://example.test/item",
+        "permalink": "https://example.test/permalink",
+        "reason": "Users repeatedly describe the target problem."
+      }
+    ]
+  }
+}
+```
+
+Enums currently use their numeric JSON representation (`AnalysisStatus.Completed = 2`, `SignalStrength.Moderate = 1`).
+
+Evidence source metadata is loaded from the stored `CollectedMarketItem`, never trusted from model output. `Reason` is derived from the persisted insight text associated with that evidence.
+
+## Grounding and weak-signal behavior
+
+- The idea is the analysis topic, not evidence.
+- AI input contains only selected `CollectedMarketItem` fields.
+- Collected content is treated as untrusted data and prompt instructions inside it are ignored.
+- Temporary IDs such as `C001` are mapped back to real database IDs inside Application.
+- Unknown or fabricated evidence IDs reject the provider result.
+- Application independently caps `SignalStrength`; the provider cannot upgrade weak input to Strong.
+- With no usable collected data, no Market Insight provider call is made. The request completes with `SignalStrength=Weak`, `MarketScore=null`, and an honest summary.
+
+## Architecture
+
+```text
+MarketPulse.Api/             HTTP API and composition root
+MarketPulse.Application/     Use cases, processor, AI abstractions and validation
+MarketPulse.Domain/          Entities, enums and repository contracts
+MarketPulse.Infrastructure/ OpenRouter, collectors, EF Core and repositories
+tests/MarketPulse.UnitTests/ Unit, model, provider and processor tests
+docs/ai/                     Maintainer context and handoff documentation
+```
+
+Dependency direction:
+
+```text
+Application    --> Domain
+Infrastructure --> Application, Domain
+API            --> Application, Infrastructure
+```
+
+## Implemented capabilities
+
+- Create and retrieve asynchronous analysis requests.
+- In-process queue and hosted background worker.
+- OpenRouter-backed search-query generation.
+- Hacker News Algolia data collection.
+- Reddit client/collector, disabled by default.
+- Deterministic bounded Market Insight input.
+- Strict OpenRouter JSON Schema output with compatible provider routing.
+- Application-side response, score, signal and evidence validation.
+- Relational Strength, Weakness, Opportunity and Risk insights.
+- Evidence foreign keys to real collected market items.
+- Atomic final result/evidence/status persistence.
+- Duplicate-result prevention and duplicate queue-delivery handling.
+- Cancellation-aware provider retry and worker shutdown.
+- PostgreSQL persistence with EF Core migrations.
+
+## Technology
+
+- .NET 8 and ASP.NET Core
+- Entity Framework Core 8
+- PostgreSQL with Npgsql
+- OpenRouter Chat Completions
+- Docker and Docker Compose
+- xUnit
+
+## API
+
+Create an analysis:
+
+```http
+POST /api/analysis
+Content-Type: application/json
+
 {
   "idea": "AI note-taking app for students"
 }
-````
-
-## Output
-
-```json
-{
-  "marketScore": 74,
-  "summary": "Growing demand exists for AI-powered education tools, but competition is high.",
-  "strengths": [
-    "Strong interest in productivity tools",
-    "Positive sentiment around AI-assisted studying"
-  ],
-  "risks": [
-    "Highly saturated market",
-    "Strong existing competitors"
-  ],
-  "opportunities": [
-    "Offline support",
-    "Better mobile experience"
-  ]
-}
 ```
 
----
+The API responds with `202 Accepted` and an analysis request ID.
 
-# High-Level Architecture
+Retrieve status/result:
 
-```text
-                +-------------------+
-                |     Client App    |
-                +---------+---------+
-                          |
-                          v
-                +-------------------+
-                |    ASP.NET API    |
-                +---------+---------+
-                          |
-          +---------------+---------------+
-          |                               |
-          v                               v
-+-------------------+        +----------------------+
-| Analysis Pipeline |        | Background Workers   |
-+-------------------+        +----------------------+
-          |                               |
-          +---------------+---------------+
-                          |
-                          v
-                +-------------------+
-                |   AI Integration  |
-                +-------------------+
-                          |
-                          v
-                +-------------------+
-                | PostgreSQL / Redis|
-                +-------------------+
+```http
+GET /api/analysis/{id}
 ```
 
----
+Health check:
 
-# Tech Stack
-
-## Backend
-
-* ASP.NET Core 8
-* C#
-* Clean Architecture
-* MediatR
-* FluentValidation
-
-## Database
-
-* PostgreSQL
-* Entity Framework Core
-* Dapper
-
-## Infrastructure
-
-* Docker
-* Docker Compose
-* Redis
-* Hangfire
-
-## AI
-
-* OpenAI API
-
----
-
-# Project Structure
-
-```text
-src/
- ├── Api
- ├── Application
- ├── Domain
- ├── Infrastructure
-
-tests/
- ├── UnitTests
- ├── IntegrationTests
+```http
+GET /health
 ```
 
----
+Swagger is enabled in the Development environment.
 
-# Development Principles
+## Running locally
 
-This project is being developed as a real-world production-style system.
+Requirements:
 
-Key engineering goals:
+- Docker with Compose
+- or .NET 8 SDK and PostgreSQL
 
-* Maintainable architecture
-* Clear separation of concerns
-* Scalable processing pipeline
-* Async-first design
-* Observability and logging
-* Clean Git history
-* Strong documentation
-
----
-
-# Current Status
-
-## Phase 0 — Product Discovery
-
-* [x] Product vision
-* [x] MVP definition
-* [x] Initial architecture planning
-
-## Phase 1 — Foundation
-
-* [x] Initial solution setup
-* [x] Docker environment
-* [x] PostgreSQL integration
-* [x] Health checks
-* [x] Swagger setup
-
-## Phase 2 — Analysis Engine
-
-* [ ] Analysis pipeline
-* [ ] AI orchestration
-* [ ] Sentiment analysis
-* [ ] Competitor extraction
-* [ ] Scoring engine
-
-## Phase 3 — Data Sources
-
-* [ ] Reddit integration
-* [ ] Product Hunt integration
-* [ ] Data normalization
-* [ ] Background processing
-
----
-
-# Non-Goals (For MVP)
-
-The following are intentionally excluded from the first version:
-
-* Authentication
-* Payments
-* Subscription system
-* Microservices
-* Real-time processing
-* Advanced dashboards
-* Multi-agent orchestration
-* Vector databases
-
----
-
-# Running Locally
-
-## Requirements
-
-* Docker
-* Docker Compose
-* .NET 8 SDK
-
-## Start
-
-Create a local environment file from the example:
+Create a local environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-Set the required secrets in `.env`:
+Replace the placeholder PostgreSQL password and OpenRouter API key in `.env`. Do not commit `.env`.
 
-```text
-POSTGRES_DB=marketpulse
-POSTGRES_USER=marketpulse
-POSTGRES_PASSWORD=replace-with-a-strong-local-password
-OPENROUTER_API_KEY=replace-with-your-openrouter-api-key
-REDDIT_CLIENT_ID=
-REDDIT_CLIENT_SECRET=
-```
-
-Do not commit `.env`. PostgreSQL credentials, the OpenRouter API key, and optional Reddit credentials are read from environment variables.
-
-Then start the stack:
+Start the stack:
 
 ```bash
 docker compose up --build
 ```
 
-If your Docker installation uses the legacy Compose command, use `docker-compose up --build`.
-
-Docker Compose starts PostgreSQL, waits for it to become healthy, runs EF Core migrations through the `marketpulse.migrator` service, and then starts the API.
-
-API will be available at:
+Docker Compose waits for PostgreSQL, runs the EF migration container, and starts the API at:
 
 ```text
 http://localhost:5000
 ```
 
-Swagger:
+Configuration uses standard .NET environment-variable names such as:
 
 ```text
-http://localhost:5000/swagger
+ConnectionStrings__DefaultConnection
+OpenRouter__ApiKey
+OpenRouter__Model
+OpenRouter__Endpoint
+OpenRouter__Temperature
+OpenRouter__MaxTokens
+OpenRouter__TimeoutSeconds
+OpenRouter__MaxRetryAttempts
+OpenRouter__RetryBaseDelayMilliseconds
 ```
 
----
+Secrets must be supplied through environment variables, user secrets, CI/CD secrets, or another untracked local secret source.
 
-# Roadmap
+## Build and test
 
-Future versions may include:
-
-* Advanced AI workflows
-* Trend forecasting
-* Semantic search
-* Vector search
-* Multi-source market intelligence
-* Autonomous research agents
-* SaaS deployment
-
----
-
-# Why This Project Exists
-
-Most developers build CRUD applications for portfolios.
-
-MarketPulse is designed to demonstrate:
-
-* Backend engineering
-* System design
-* AI integration
-* Data processing
-* Scalable architecture
-* Business-oriented thinking
-
----
-
-# Contributing
-
-Contributions, ideas, and feedback are welcome.
-
-This project is primarily built as a learning and engineering showcase project, but external contributions are appreciated.
-
-## Development Workflow
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit changes with clear commit messages
-4. Open a pull request
-
----
-
-# Engineering Challenges
-
-This project intentionally explores several real-world backend engineering challenges:
-
-* Building scalable analysis pipelines
-* Handling unreliable external APIs
-* Designing AI orchestration flows
-* Background job processing
-* Data normalization across multiple sources
-* Rate limiting and retry strategies
-* Prompt engineering and output validation
-* Caching and performance optimization
-
----
-
-# Planned Engineering Improvements
-
-Future engineering improvements may include:
-
-* CI/CD pipelines
-* Distributed processing
-* Event-driven architecture
-* OpenTelemetry integration
-* Kubernetes deployment
-* API versioning
-* Feature flags
-* Multi-tenant architecture
-
----
-
-# API Design Philosophy
-
-The API is designed with the following principles:
-
-* Predictable request/response contracts
-* Clear validation errors
-* Separation between domain and transport models
-* Async processing where appropriate
-* Minimal and composable endpoints
-
----
-
-# Testing Strategy
-
-Testing will include:
-
-* Unit tests for business logic
-* Integration tests for infrastructure
-* API endpoint testing
-* Validation testing
-* Background worker testing
-
----
-
-# Observability
-
-The platform is planned to include:
-
-* Structured logging
-* Request tracing
-* Health monitoring
-* Error tracking
-* Performance metrics
-
----
-
-# Security Considerations
-
-Although security is not the primary focus of the MVP, the project aims to follow secure engineering practices:
-
-* Secrets stored via environment variables
-* Input validation
-* Rate limiting
-* Safe AI output handling
-* Secure Docker configuration
-
----
-
-# Learning Goals
-
-This project is also intended to improve hands-on experience with:
-
-* Distributed systems concepts
-* AI-powered backend systems
-* Containerized development workflows
-* Production-oriented architecture
-* System scalability patterns
-
----
-
-# License
-
-This project is licensed under the MIT License.
-
----
-
-# Author
-
-Built by Amirhossein Mohseni.
-
-Backend Engineer focused on scalable systems, AI-powered applications, and business-oriented software engineering.
+```bash
+dotnet build MarketPulse.sln --no-restore
+dotnet test MarketPulse.sln --no-build --no-restore
 ```
+
+Check EF model consistency:
+
+```bash
+dotnet ef migrations has-pending-model-changes \
+  --project MarketPulse.Infrastructure \
+  --startup-project MarketPulse.Api
+```
+
+## Current MVP limitations
+
+- The queue is process-local and is not durable across application restarts.
+- A request cancelled during shutdown remains Processing; automatic stale-job recovery is not implemented.
+- Reddit collection requires credentials and is disabled by default.
+- Product Hunt collection is not implemented.
+- Sentiment, competitor and pain-point extraction are not separate first-class result contracts yet.
+- Authentication, authorization, multi-tenancy, payments and a frontend are not implemented.
+- Live provider and PostgreSQL integration tests require external services and credentials.
+- Production observability and distributed job processing remain future work.
+
+## License
+
+MIT

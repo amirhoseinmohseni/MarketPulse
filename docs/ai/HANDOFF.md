@@ -6,7 +6,7 @@
 
 ## Current status
 
-Market Insight phases 1, 2, and 3 are complete. `AnalysisGenerator` orchestrates a provider-neutral, evidence-grounded Application pipeline, and Infrastructure now implements `IAiMarketInsightClient` through OpenRouter.
+All four Market Insight phases are complete. `AnalysisWorker` now delegates queue items to `IAnalysisRequestProcessor`, which orchestrates query reuse/generation, collection, the evidence-grounded `IAnalysisGenerator`, and final state persistence. The worker has no direct AI/OpenRouter dependency.
 
 The pipeline loads only the request's `CollectedMarketItem` records, filters and orders them deterministically, applies configured item/text budgets, assigns temporary IDs such as `C001`, and retains an internal mapping to real database IDs. Application code independently evaluates the maximum allowed signal strength before any provider call.
 
@@ -22,6 +22,20 @@ If no usable item exists, no AI client is called and the generator returns an ho
 - Standard `Retry-After` delta/date values take precedence over exponential fallback delay.
 - HTTP errors, HTTP-200 error envelopes, choices, finish reason, refusal, content type, empty content, malformed JSON, and truncated output are checked defensively.
 - Prompts, collected content, API keys, provider response bodies, and full generated responses are not logged.
+
+## Phase 4 processing behavior
+
+- `IAnalysisProcessingStateStore` conditionally claims Pending/Failed requests and skips Completed or currently Processing requests.
+- Existing search queries are reused during reprocessing.
+- Result, insight/evidence graph, and Completed status are persisted in one explicit transaction.
+- The final write locks the request row and rechecks for an existing result before insertion.
+- The EF one-to-one unique relationship remains a database-level duplicate-result safeguard.
+- Every evidence FK is revalidated against collected items owned by the same request before persistence.
+- A failed final write rolls back; the change tracker is cleared before the request is marked Failed.
+- Provider and validation failures mark the request Failed.
+- Shutdown cancellation propagates out of collectors/provider/processor and does not mark the request Failed.
+- No-data requests complete with an honest Weak/null-score result.
+- GET evidence metadata comes from `CollectedMarketItem`; `Reason` is built from persisted insight text.
 
 ## Phase 1 schema
 
@@ -65,18 +79,12 @@ OpenRouter transport settings are read from `OpenRouter`. In addition to the exi
 
 ## Next task
 
-Implement Market Insight phase 4:
-
-- Make result/evidence persistence and request completion atomic.
-- Make reprocessing idempotent and prevent duplicate results.
-- Distinguish host shutdown cancellation from provider failure.
-- Ensure provider failures mark the request Failed without leaking response data.
-- Add PostgreSQL-backed worker and persistence integration tests.
+Market Insight implementation is complete. The next reliability increment should replace or supplement the in-process queue with durable delivery and add stale-Processing recovery plus live PostgreSQL/OpenRouter integration coverage.
 
 ## Verification
 
 - Build: `dotnet build MarketPulse.sln --no-restore -p:NuGetAudit=false` passed with 0 warnings and 0 errors.
-- Tests: 36 unit/model/pipeline/provider tests passed.
+- Tests: 48 unit/model/pipeline/provider/processor/API tests passed.
 - EF model: `dotnet ef migrations has-pending-model-changes` reported no pending changes.
 - Migration SQL: forward script generation from `AddCollectedMarketItems` to `AddEvidenceBasedMarketInsights` passed.
 - Runtime migration against a live PostgreSQL database was not run.
@@ -95,6 +103,9 @@ Implement Market Insight phase 4:
 - `MarketPulse.Application/Services/Analyser/MarketInsightSignalEvaluator.cs`
 - `MarketPulse.Application/Services/Analyser/MarketInsightPromptBuilder.cs`
 - `MarketPulse.Application/Services/Analyser/MarketInsightResponseParser.cs`
+- `MarketPulse.Application/Services/AnalysisProcessing/AnalysisRequestProcessor.cs`
+- `MarketPulse.Application/Workers/AnalysisWorker.cs`
 - `MarketPulse.Infrastructure/AI/OpenRouterAiMarketInsightClient.cs`
 - `MarketPulse.Infrastructure/AI/OpenRouterOptions.cs`
+- `MarketPulse.Infrastructure/Persistence/AnalysisProcessingStateStore.cs`
 - `tests/MarketPulse.UnitTests/`

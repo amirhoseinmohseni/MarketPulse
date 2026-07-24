@@ -30,22 +30,27 @@ This file tracks repository work. Update it when a task starts or is completed.
 - [x] Phase 3: validate OpenRouter error envelopes, choices, finish reason, and content defensively.
 - [x] Phase 3: add provider payload, response, error, timeout, retry, and cancellation tests.
 - [x] Phase 3: update sanitized OpenRouter configuration templates.
+- [x] Phase 4: connect `AnalysisWorker` to a testable Application request processor.
+- [x] Phase 4: atomically persist result, evidence, and Completed status.
+- [x] Phase 4: prevent duplicate results and reuse existing search queries during reprocessing.
+- [x] Phase 4: distinguish shutdown cancellation from provider/validation failures.
+- [x] Phase 4: expose database-backed evidence metadata and Reason through GET analysis.
+- [x] Phase 4: add processor, failure, cancellation, duplicate, EF, DTO, and API tests.
 
 ## In progress
 
-- [ ] No active task recorded. Phase 4 is next.
+- [ ] No active Market Insight implementation task.
 
 ## Planned
 
-- [ ] Phase 4: harden worker status transitions, cancellation, idempotency, and atomic persistence.
-- [ ] Phase 4: add end-to-end PostgreSQL and API integration tests.
+- [ ] Add live PostgreSQL worker/persistence integration tests.
+- [ ] Replace the in-process queue or add durable delivery and stale-Processing recovery.
 - [ ] Decide and implement the remaining MVP capabilities: sentiment, competitor extraction, pain points, and scoring.
 - [ ] Add Product Hunt integration if it remains in product scope.
 - [ ] Add production observability and CI/CD.
 
 ## Blockers and dependencies
 
-- Reliable request completion depends on phase 4 worker/persistence hardening.
 - Live OpenRouter verification requires a locally supplied API key and a configured model/provider route that supports every structured-output parameter.
 - Reddit collection depends on valid Reddit credentials and provider access.
 - Live migration/integration tests require a reproducible PostgreSQL test environment.

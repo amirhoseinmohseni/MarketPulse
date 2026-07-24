@@ -93,12 +93,24 @@ namespace MarketPulse.Application.Services.AnalysisRequest
         private static AnalysisResultDto MapResult(AnalysisResult result)
         {
             var evidence = result.Insights
-                .SelectMany(x => x.Evidence)
-                .Where(x => x.CollectedMarketItem is not null)
-                .GroupBy(x => x.CollectedMarketItemId)
-                .Select(x =>
+                .SelectMany(insight => insight.Evidence.Select(reference => new
                 {
-                    var item = x.First().CollectedMarketItem!;
+                    Insight = insight,
+                    Reference = reference
+                }))
+                .Where(x => x.Reference.CollectedMarketItem is not null)
+                .GroupBy(x => x.Reference.CollectedMarketItemId)
+                .Select(group =>
+                {
+                    var item = group.First().Reference.CollectedMarketItem!;
+                    var reason = string.Join(
+                        " ",
+                        group
+                            .OrderBy(x => x.Insight.Type)
+                            .ThenBy(x => x.Insight.Position)
+                            .Select(x => x.Insight.Text.Trim())
+                            .Where(x => x.Length > 0)
+                            .Distinct(StringComparer.Ordinal));
 
                     return new AnalysisEvidenceDto
                     {
@@ -106,7 +118,8 @@ namespace MarketPulse.Application.Services.AnalysisRequest
                         Source = item.Source,
                         Title = item.Title,
                         Url = item.Url,
-                        Permalink = item.Permalink
+                        Permalink = item.Permalink,
+                        Reason = reason
                     };
                 })
                 .OrderBy(x => x.Source)

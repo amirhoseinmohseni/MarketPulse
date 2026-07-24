@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\MarketPulse.Api\MarketPulse.Api.csproj" />
     <ProjectReference Include="..\..\MarketPulse.Application\MarketPulse.Application.csproj" />
     <ProjectReference Include="..\..\MarketPulse.Domain\MarketPulse.Domain.csproj" />
     <ProjectReference Include="..\..\MarketPulse.Infrastructure\MarketPulse.Infrastructure.csproj" />
