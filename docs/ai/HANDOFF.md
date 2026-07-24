@@ -6,9 +6,11 @@
 
 ## Current status
 
-Market Insight phase 1 is complete. `AnalysisResult` now has a nullable market score, an explicit `SignalStrength`, and a relational collection of typed insights. Each `AnalysisInsight` can reference one or more real `CollectedMarketItem` records through `AnalysisEvidence`.
+Market Insight phases 1 and 2 are complete. `AnalysisGenerator` now orchestrates a provider-neutral, evidence-grounded Application pipeline instead of returning a simulated result.
 
-The final analysis generator is still a placeholder. It now returns an honest Weak result with a null score and no fabricated insights so the existing pipeline remains compatible with the new contract; real evidence-grounded generation belongs to phase 2.
+The pipeline loads only the request's `CollectedMarketItem` records, filters and orders them deterministically, applies configured item/text budgets, assigns temporary IDs such as `C001`, and retains an internal mapping to real database IDs. Application code independently evaluates the maximum allowed signal strength before any provider call.
+
+If no usable item exists, no AI client is called and the generator returns an honest Weak result with a null score and no insights. With usable data, Application builds injection-resistant system/user prompts and a strict JSON Schema, then parses and validates the raw provider response before creating domain entities.
 
 ## Phase 1 schema
 
@@ -32,24 +34,38 @@ AnalysisRequest
 
 Legacy results are assigned `SignalStrength.Weak`. No evidence is fabricated for legacy insights because the old rows contain no traceable source relationship. The down migration reconstructs the legacy text fields before dropping the new tables.
 
+## Phase 2 validation behavior
+
+- MarketScore must be null or between 0 and 100.
+- SignalStrength must be Weak, Moderate, or Strong and is capped by Application's deterministic assessment.
+- A final Weak signal cannot retain a market score.
+- Summary and insight text must be non-empty and within configured limits.
+- Insight and evidence counts are bounded.
+- Every insight must reference at least one unique temporary evidence ID.
+- Unknown or fabricated evidence IDs reject the entire response.
+- Only validated IDs are converted to `CollectedMarketItemId` foreign keys.
+- Weak input volume or diversity is explicitly reflected in the persisted summary.
+
+## Configuration
+
+Application limits and signal thresholds are read from `MarketInsightAnalysis` configuration. Checked-in defaults cover item count, idea/source/title/content lengths, total item characters, signal thresholds, insight counts, evidence counts, and response text lengths.
+
 ## Next task
 
-Implement Market Insight phase 2 in the Application layer:
+Implement Market Insight phase 3:
 
-- Define `IAiMarketInsightClient` and provider-neutral request/response contracts.
-- Load only the request's collected market items.
-- Build bounded deterministic AI input.
-- Evaluate and enforce weak-signal policy.
-- Build the grounded prompt.
-- Parse and validate structured output and evidence IDs.
-- Replace the simulated generator with the real Application orchestration.
+- Add the OpenRouter `IAiMarketInsightClient` implementation in Infrastructure.
+- Send the Application-provided system/user prompts and JSON Schema using strict structured output.
+- Read endpoint, API key, model, temperature, and token limits from configuration.
+- Register the provider through DI without adding OpenRouter dependencies to Application.
+- Add provider transport, malformed envelope, timeout, and cancellation tests.
 
-Do not add OpenRouter-specific code to Domain or Application. The OpenRouter provider remains phase 3.
+Do not move response trust or evidence validation into Infrastructure. The provider must return raw model JSON to the existing Application validator.
 
 ## Verification
 
 - Build: `dotnet build MarketPulse.sln --no-restore -p:NuGetAudit=false` passed with 0 warnings and 0 errors.
-- Tests: 7 unit/model mapping tests passed.
+- Tests: 18 unit/model/pipeline tests passed.
 - EF model: `dotnet ef migrations has-pending-model-changes` reported no pending changes.
 - Migration SQL: forward script generation from `AddCollectedMarketItems` to `AddEvidenceBasedMarketInsights` passed.
 - Runtime migration against a live PostgreSQL database was not run.
@@ -62,4 +78,10 @@ Do not add OpenRouter-specific code to Domain or Application. The OpenRouter pro
 - `MarketPulse.Infrastructure/Persistence/ApplicationDbContext.cs`
 - `MarketPulse.Infrastructure/Persistence/Migrations/20260724163611_AddEvidenceBasedMarketInsights.cs`
 - `MarketPulse.Application/Dtos/AnalysisResultDto.cs`
+- `MarketPulse.Application/Services/Analyser/IAiMarketInsightClient.cs`
+- `MarketPulse.Application/Services/Analyser/AnalysisGenerator.cs`
+- `MarketPulse.Application/Services/Analyser/MarketInsightInputBuilder.cs`
+- `MarketPulse.Application/Services/Analyser/MarketInsightSignalEvaluator.cs`
+- `MarketPulse.Application/Services/Analyser/MarketInsightPromptBuilder.cs`
+- `MarketPulse.Application/Services/Analyser/MarketInsightResponseParser.cs`
 - `tests/MarketPulse.UnitTests/`

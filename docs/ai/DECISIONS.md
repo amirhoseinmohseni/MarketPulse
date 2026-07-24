@@ -14,6 +14,18 @@
 - **Reason:** Keep provider details out of controllers and application workflows.
 - **Consequence:** Provider configuration is mapped in Infrastructure and supplied through dependency injection.
 
+### Application owns Market Insight grounding and validation
+
+- **Decision:** `IAiMarketInsightClient` accepts provider-neutral prompts and a JSON Schema, while Application selects the collected data, evaluates signal quality, validates raw model JSON, and maps temporary evidence IDs to database IDs.
+- **Reason:** Structured provider output improves format reliability but is not a trust boundary. Grounding and database integrity must remain independent of OpenRouter behavior.
+- **Consequence:** Infrastructure must not create domain insights or evidence directly. Unknown evidence IDs, invalid scores, empty insight text, excessive counts, and signal upgrades are rejected or constrained before persistence.
+
+### Temporary evidence identifiers in AI input
+
+- **Decision:** AI input uses deterministic request-local IDs such as `C001`; real `CollectedMarketItemId` values remain inside Application.
+- **Reason:** Short stable identifiers reduce prompt size and prevent the model from inventing or directly handling database identifiers.
+- **Consequence:** Every response evidence ID is checked against the exact input allow-list before an `AnalysisEvidence` foreign key is created.
+
 ### Background analysis processing
 
 - **Decision:** Queue analysis request IDs and process them with the hosted `AnalysisWorker`.

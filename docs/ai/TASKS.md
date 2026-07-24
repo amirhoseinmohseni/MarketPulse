@@ -17,16 +17,20 @@ This file tracks repository work. Update it when a task starts or is completed.
 - [x] Add AnalysisEvidence with a foreign key to CollectedMarketItem.
 - [x] Add a non-destructive legacy backfill migration.
 - [x] Add the initial unit and EF model mapping test project.
+- [x] Phase 2: define the provider-neutral `IAiMarketInsightClient` contract.
+- [x] Phase 2: implement deterministic bounded AI input and temporary evidence IDs.
+- [x] Phase 2: evaluate and enforce signal quality independently from the model.
+- [x] Phase 2: build grounded, prompt-injection-resistant prompts and a strict JSON Schema.
+- [x] Phase 2: parse and validate model JSON, insight limits, scores, and evidence IDs.
+- [x] Phase 2: map validated evidence to real `CollectedMarketItemId` values.
+- [x] Phase 2: add Application pipeline tests, including cancellation and malformed output.
 
 ## In progress
 
-- [ ] No active task recorded. See `HANDOFF.md`.
+- [ ] No active task recorded. Phase 3 is next.
 
 ## Planned
 
-- [ ] Phase 2: implement the provider-neutral Application analysis pipeline.
-- [ ] Phase 2: implement deterministic input selection and weak-signal enforcement.
-- [ ] Phase 2: add structured response parsing and evidence-ID validation.
 - [ ] Phase 3: implement the OpenRouter Market Insight provider and structured JSON Schema output.
 - [ ] Phase 3: add provider error, timeout, and malformed-response tests.
 - [ ] Phase 4: harden worker status transitions, cancellation, idempotency, and atomic persistence.
@@ -37,7 +41,7 @@ This file tracks repository work. Update it when a task starts or is completed.
 
 ## Blockers and dependencies
 
-- Real Market Insight generation depends on phase 2 Application orchestration.
-- The OpenRouter provider depends on the phase 2 provider-neutral contract and response schema.
+- Real Market Insight generation in the worker depends on the phase 3 `IAiMarketInsightClient` implementation and DI registration.
+- Phase 3 must use the phase 2 provider-neutral request and return raw model JSON for Application validation.
 - Reddit collection depends on valid Reddit credentials and provider access.
 - Live migration/integration tests require a reproducible PostgreSQL test environment.
