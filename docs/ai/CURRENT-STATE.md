@@ -15,6 +15,7 @@
 - An in-process background queue and `AnalysisWorker` are registered.
 - AI search query generation is implemented behind Application interfaces and uses OpenRouter in Infrastructure.
 - The provider-neutral Market Insight Application pipeline is implemented. It builds bounded deterministic input, evaluates signal quality, creates a grounded prompt and strict response schema, validates AI JSON, and maps temporary evidence IDs to real collected item IDs.
+- `IAiMarketInsightClient` is implemented in Infrastructure with OpenRouter Chat Completions, strict JSON Schema output, structured-output-compatible routing, bounded transient retry, configured timeout, and defensive response-envelope validation.
 - Empty or unusable collected datasets complete the analysis-generation step without an AI call and produce an honest Weak result with a null score.
 - Hacker News data collection is implemented and enabled by the checked-in default configuration.
 - Reddit integration is implemented but disabled by default.
@@ -23,8 +24,6 @@
 
 ## Incomplete or not yet integrated
 
-- `IAiMarketInsightClient` has no Infrastructure implementation or DI registration yet. Until phase 3 is complete, the real worker flow cannot resolve and call a Market Insight provider.
-- OpenRouter structured-output transport for Market Insight is not implemented.
 - Worker idempotency, cancellation-specific status handling, and atomic completion/result persistence remain phase 4 work.
 - Authentication, authorization, frontend, payments, and multi-tenancy are not implemented.
 - Product Hunt integration is described in the README vision but is not present in the current source tree.
@@ -35,6 +34,7 @@
 - `DataCollectors:Sources:HackerNews:Enabled` defaults to `true`.
 - `DataCollectors:Sources:Reddit:Enabled` defaults to `false`.
 - OpenRouter and Reddit credentials are expected through configuration/environment variables; do not commit real values.
+- OpenRouter timeout and retry behavior is configured through `OpenRouter:TimeoutSeconds`, `OpenRouter:MaxRetryAttempts`, and `OpenRouter:RetryBaseDelayMilliseconds`.
 - Local Docker Compose runs PostgreSQL, an EF migration container, and the API.
 
 ## Areas requiring care
@@ -44,3 +44,4 @@
 - The worker changes request status and persists collected data asynchronously; status transitions must remain consistent.
 - External API behavior, credentials, rate limits, and failure handling need explicit verification before changing integrations.
 - AI output remains untrusted after structured generation; Application validation and evidence-ID allow-listing must not be bypassed by future providers.
+- Provider responses, prompts, collected content, and API keys must not be added to logs or exception messages.

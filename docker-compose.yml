@@ -13,6 +13,9 @@ services:
       OpenRouter__Endpoint: ${OPENROUTER_ENDPOINT:-https://openrouter.ai/api/v1/chat/completions}
       OpenRouter__Temperature: ${OPENROUTER_TEMPERATURE:-0.2}
       OpenRouter__MaxTokens: ${OPENROUTER_MAX_TOKENS:-800}
+      OpenRouter__TimeoutSeconds: ${OPENROUTER_TIMEOUT_SECONDS:-60}
+      OpenRouter__MaxRetryAttempts: ${OPENROUTER_MAX_RETRY_ATTEMPTS:-2}
+      OpenRouter__RetryBaseDelayMilliseconds: ${OPENROUTER_RETRY_BASE_DELAY_MILLISECONDS:-500}
       DataCollectors__FailFast: ${DATA_COLLECTORS_FAIL_FAST:-false}
       DataCollectors__Sources__Reddit__Enabled: ${DATA_COLLECTORS_REDDIT_ENABLED:-false}
       DataCollectors__Sources__HackerNews__Enabled: ${DATA_COLLECTORS_HACKERNEWS_ENABLED:-true}

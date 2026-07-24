@@ -24,15 +24,19 @@ This file tracks repository work. Update it when a task starts or is completed.
 - [x] Phase 2: parse and validate model JSON, insight limits, scores, and evidence IDs.
 - [x] Phase 2: map validated evidence to real `CollectedMarketItemId` values.
 - [x] Phase 2: add Application pipeline tests, including cancellation and malformed output.
+- [x] Phase 3: implement and register the OpenRouter Market Insight provider.
+- [x] Phase 3: send strict JSON Schema output with structured-output-compatible routing.
+- [x] Phase 3: add configured timeout and bounded retry for HTTP 429/503.
+- [x] Phase 3: validate OpenRouter error envelopes, choices, finish reason, and content defensively.
+- [x] Phase 3: add provider payload, response, error, timeout, retry, and cancellation tests.
+- [x] Phase 3: update sanitized OpenRouter configuration templates.
 
 ## In progress
 
-- [ ] No active task recorded. Phase 3 is next.
+- [ ] No active task recorded. Phase 4 is next.
 
 ## Planned
 
-- [ ] Phase 3: implement the OpenRouter Market Insight provider and structured JSON Schema output.
-- [ ] Phase 3: add provider error, timeout, and malformed-response tests.
 - [ ] Phase 4: harden worker status transitions, cancellation, idempotency, and atomic persistence.
 - [ ] Phase 4: add end-to-end PostgreSQL and API integration tests.
 - [ ] Decide and implement the remaining MVP capabilities: sentiment, competitor extraction, pain points, and scoring.
@@ -41,7 +45,7 @@ This file tracks repository work. Update it when a task starts or is completed.
 
 ## Blockers and dependencies
 
-- Real Market Insight generation in the worker depends on the phase 3 `IAiMarketInsightClient` implementation and DI registration.
-- Phase 3 must use the phase 2 provider-neutral request and return raw model JSON for Application validation.
+- Reliable request completion depends on phase 4 worker/persistence hardening.
+- Live OpenRouter verification requires a locally supplied API key and a configured model/provider route that supports every structured-output parameter.
 - Reddit collection depends on valid Reddit credentials and provider access.
 - Live migration/integration tests require a reproducible PostgreSQL test environment.

@@ -26,6 +26,18 @@
 - **Reason:** Short stable identifiers reduce prompt size and prevent the model from inventing or directly handling database identifiers.
 - **Consequence:** Every response evidence ID is checked against the exact input allow-list before an `AnalysisEvidence` foreign key is created.
 
+### Strict OpenRouter structured-output routing
+
+- **Decision:** Market Insight requests send the Application-owned JSON Schema through `response_format` with `strict=true` and set `provider.require_parameters=true`.
+- **Reason:** OpenRouter can otherwise route to a provider that ignores unsupported parameters, weakening the structured-output guarantee.
+- **Consequence:** Requests fail when no compatible route exists instead of silently accepting a provider that cannot enforce the schema.
+
+### Bounded provider retry without sensitive response logging
+
+- **Decision:** Retry only HTTP 429 and 503, honor `Retry-After`, cap retry attempts from configuration, and never include full provider bodies or prompts in logs/exceptions.
+- **Reason:** Rate limiting and provider unavailability are transient, while authentication and validation failures need operator action. Provider bodies and prompts may contain sensitive collected data.
+- **Consequence:** Retry is cancellation-aware and finite; other HTTP errors fail immediately with only status and sanitized error-code metadata.
+
 ### Background analysis processing
 
 - **Decision:** Queue analysis request IDs and process them with the hosted `AnalysisWorker`.

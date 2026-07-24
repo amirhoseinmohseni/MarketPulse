@@ -6,11 +6,22 @@
 
 ## Current status
 
-Market Insight phases 1 and 2 are complete. `AnalysisGenerator` now orchestrates a provider-neutral, evidence-grounded Application pipeline instead of returning a simulated result.
+Market Insight phases 1, 2, and 3 are complete. `AnalysisGenerator` orchestrates a provider-neutral, evidence-grounded Application pipeline, and Infrastructure now implements `IAiMarketInsightClient` through OpenRouter.
 
 The pipeline loads only the request's `CollectedMarketItem` records, filters and orders them deterministically, applies configured item/text budgets, assigns temporary IDs such as `C001`, and retains an internal mapping to real database IDs. Application code independently evaluates the maximum allowed signal strength before any provider call.
 
 If no usable item exists, no AI client is called and the generator returns an honest Weak result with a null score and no insights. With usable data, Application builds injection-resistant system/user prompts and a strict JSON Schema, then parses and validates the raw provider response before creating domain entities.
+
+## Phase 3 provider behavior
+
+- The OpenRouter Chat Completions request contains exactly the Application system and user messages.
+- `response_format.type` is `json_schema`; the Application schema is forwarded unchanged with `strict=true`.
+- `provider.require_parameters=true` prevents routing to providers that ignore structured-output parameters.
+- API key, endpoint, model, temperature, token limit, timeout, retry count, and base retry delay come from configuration.
+- Only HTTP 429 and 503 are retried, with a finite configured retry count.
+- Standard `Retry-After` delta/date values take precedence over exponential fallback delay.
+- HTTP errors, HTTP-200 error envelopes, choices, finish reason, refusal, content type, empty content, malformed JSON, and truncated output are checked defensively.
+- Prompts, collected content, API keys, provider response bodies, and full generated responses are not logged.
 
 ## Phase 1 schema
 
@@ -50,22 +61,22 @@ Legacy results are assigned `SignalStrength.Weak`. No evidence is fabricated for
 
 Application limits and signal thresholds are read from `MarketInsightAnalysis` configuration. Checked-in defaults cover item count, idea/source/title/content lengths, total item characters, signal thresholds, insight counts, evidence counts, and response text lengths.
 
+OpenRouter transport settings are read from `OpenRouter`. In addition to the existing endpoint/model/temperature/token settings, phase 3 adds `TimeoutSeconds`, `MaxRetryAttempts`, and `RetryBaseDelayMilliseconds`. Docker Compose and `.env.example` contain placeholder/default mappings only.
+
 ## Next task
 
-Implement Market Insight phase 3:
+Implement Market Insight phase 4:
 
-- Add the OpenRouter `IAiMarketInsightClient` implementation in Infrastructure.
-- Send the Application-provided system/user prompts and JSON Schema using strict structured output.
-- Read endpoint, API key, model, temperature, and token limits from configuration.
-- Register the provider through DI without adding OpenRouter dependencies to Application.
-- Add provider transport, malformed envelope, timeout, and cancellation tests.
-
-Do not move response trust or evidence validation into Infrastructure. The provider must return raw model JSON to the existing Application validator.
+- Make result/evidence persistence and request completion atomic.
+- Make reprocessing idempotent and prevent duplicate results.
+- Distinguish host shutdown cancellation from provider failure.
+- Ensure provider failures mark the request Failed without leaking response data.
+- Add PostgreSQL-backed worker and persistence integration tests.
 
 ## Verification
 
 - Build: `dotnet build MarketPulse.sln --no-restore -p:NuGetAudit=false` passed with 0 warnings and 0 errors.
-- Tests: 18 unit/model/pipeline tests passed.
+- Tests: 36 unit/model/pipeline/provider tests passed.
 - EF model: `dotnet ef migrations has-pending-model-changes` reported no pending changes.
 - Migration SQL: forward script generation from `AddCollectedMarketItems` to `AddEvidenceBasedMarketInsights` passed.
 - Runtime migration against a live PostgreSQL database was not run.
@@ -84,4 +95,6 @@ Do not move response trust or evidence validation into Infrastructure. The provi
 - `MarketPulse.Application/Services/Analyser/MarketInsightSignalEvaluator.cs`
 - `MarketPulse.Application/Services/Analyser/MarketInsightPromptBuilder.cs`
 - `MarketPulse.Application/Services/Analyser/MarketInsightResponseParser.cs`
+- `MarketPulse.Infrastructure/AI/OpenRouterAiMarketInsightClient.cs`
+- `MarketPulse.Infrastructure/AI/OpenRouterOptions.cs`
 - `tests/MarketPulse.UnitTests/`

@@ -1,4 +1,5 @@
 using MarketPulse.Application;
+using MarketPulse.Application.Services.Analyser;
 using MarketPulse.Application.Services.DataCollection;
 using MarketPulse.Application.Services.HackerNewsDataCollection;
 using MarketPulse.Application.Services.RedditDataCollection;
@@ -12,6 +13,7 @@ using MarketPulse.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Globalization;
 
 namespace MarketPulse.Infrastructure
 {
@@ -34,9 +36,14 @@ namespace MarketPulse.Infrastructure
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             services.AddSingleton(CreateDataCollectorOptions(configuration));
             services.AddSingleton(CreateHackerNewsOptions(configuration));
-            services.AddSingleton(CreateOpenRouterOptions(configuration));
+            var openRouterOptions = CreateOpenRouterOptions(configuration);
+            services.AddSingleton(openRouterOptions);
             services.AddSingleton(CreateRedditOptions(configuration));
-            services.AddHttpClient<IAiSearchQueryClient, OpenRouterAiSearchQueryClient>();
+            services.AddSingleton<IOpenRouterRetryDelay, OpenRouterRetryDelay>();
+            services.AddHttpClient<IAiSearchQueryClient, OpenRouterAiSearchQueryClient>(
+                client => client.Timeout = TimeSpan.FromSeconds(openRouterOptions.TimeoutSeconds));
+            services.AddHttpClient<IAiMarketInsightClient, OpenRouterAiMarketInsightClient>(
+                client => client.Timeout = Timeout.InfiniteTimeSpan);
             services.AddHttpClient<IHackerNewsClient, HackerNewsClient>();
             services.AddHttpClient(RedditAccessTokenProvider.HttpClientName);
             services.AddSingleton<IRedditAccessTokenProvider, RedditAccessTokenProvider>();
@@ -56,14 +63,34 @@ namespace MarketPulse.Infrastructure
                 ApiKey = section["ApiKey"] ?? string.Empty,
                 Model = section["Model"] ?? "openrouter/auto",
                 Endpoint = section["Endpoint"] ?? "https://openrouter.ai/api/v1/chat/completions",
-                Temperature = double.TryParse(section["Temperature"], out var temperature)
+                Temperature = double.TryParse(
+                    section["Temperature"],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out var temperature)
+                    && temperature is >= 0 and <= 2
                     ? temperature
                     : 0.2,
-                MaxTokens = int.TryParse(section["MaxTokens"], out var maxTokens)
-                    ? maxTokens
-                    : 800
+                MaxTokens = PositiveInt(section["MaxTokens"], 800),
+                TimeoutSeconds = PositiveInt(section["TimeoutSeconds"], 60),
+                MaxRetryAttempts = Math.Min(
+                    NonNegativeInt(section["MaxRetryAttempts"], 2),
+                    5),
+                RetryBaseDelayMilliseconds = NonNegativeInt(
+                    section["RetryBaseDelayMilliseconds"],
+                    500)
             };
         }
+
+        private static int PositiveInt(string? value, int fallback)
+            => int.TryParse(value, out var parsed) && parsed > 0
+                ? parsed
+                : fallback;
+
+        private static int NonNegativeInt(string? value, int fallback)
+            => int.TryParse(value, out var parsed) && parsed >= 0
+                ? parsed
+                : fallback;
 
         private static HackerNewsOptions CreateHackerNewsOptions(IConfiguration configuration)
         {
