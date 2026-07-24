@@ -12,12 +12,8 @@ namespace MarketPulse.Application.Services.Analyser
             {
                 Id = Guid.NewGuid(),
                 AnalysisRequestId = requestId,
-                MarketScore = Random.Shared.Next(40, 95),
-                Summary = $"Fake summary for idea: {idea}",
-                Strengths = "Fast to build; Clear audience; Differentiation potential",
-                Weaknesses = "Unvalidated demand; Competition risk",
-                Opportunities = "Niche targeting; Partnerships",
-                Risks = "Low retention; Pricing pressure"
+                MarketScore = null,
+                Summary = "Evidence-based market insight generation is not implemented yet."
             };
         }
     }
