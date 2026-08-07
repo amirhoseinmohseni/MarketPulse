@@ -22,6 +22,60 @@ namespace MarketPulse.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("MarketPulse.Domain.Entities.AnalysisEvidence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AnalysisInsightId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CollectedMarketItemId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CollectedMarketItemId");
+
+                    b.HasIndex("AnalysisInsightId", "CollectedMarketItemId")
+                        .IsUnique();
+
+                    b.ToTable("AnalysisEvidences");
+                });
+
+            modelBuilder.Entity("MarketPulse.Domain.Entities.AnalysisInsight", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AnalysisResultId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalysisResultId", "Type", "Position")
+                        .IsUnique();
+
+                    b.ToTable("AnalysisInsights", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AnalysisInsights_Position_NonNegative", "\"Position\" >= 0");
+
+                            t.HasCheckConstraint("CK_AnalysisInsights_Type_Range", "\"Type\" >= 0 AND \"Type\" <= 3");
+                        });
+                });
+
             modelBuilder.Entity("MarketPulse.Domain.Entities.AnalysisRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -55,26 +109,13 @@ namespace MarketPulse.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("AnalysisRequestId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("MarketScore")
+                    b.Property<int?>("MarketScore")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Opportunities")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Risks")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Strengths")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("SignalStrength")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Summary")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Weaknesses")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -83,7 +124,12 @@ namespace MarketPulse.Infrastructure.Persistence.Migrations
                     b.HasIndex("AnalysisRequestId")
                         .IsUnique();
 
-                    b.ToTable("AnalysisResults");
+                    b.ToTable("AnalysisResults", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AnalysisResults_MarketScore_Range", "\"MarketScore\" IS NULL OR (\"MarketScore\" >= 0 AND \"MarketScore\" <= 100)");
+
+                            t.HasCheckConstraint("CK_AnalysisResults_SignalStrength_Range", "\"SignalStrength\" >= 0 AND \"SignalStrength\" <= 2");
+                        });
                 });
 
             modelBuilder.Entity("MarketPulse.Domain.Entities.CollectedMarketItem", b =>
@@ -226,6 +272,36 @@ namespace MarketPulse.Infrastructure.Persistence.Migrations
                     b.ToTable("SearchQueries");
                 });
 
+            modelBuilder.Entity("MarketPulse.Domain.Entities.AnalysisEvidence", b =>
+                {
+                    b.HasOne("MarketPulse.Domain.Entities.AnalysisInsight", "AnalysisInsight")
+                        .WithMany("Evidence")
+                        .HasForeignKey("AnalysisInsightId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MarketPulse.Domain.Entities.CollectedMarketItem", "CollectedMarketItem")
+                        .WithMany("AnalysisEvidence")
+                        .HasForeignKey("CollectedMarketItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AnalysisInsight");
+
+                    b.Navigation("CollectedMarketItem");
+                });
+
+            modelBuilder.Entity("MarketPulse.Domain.Entities.AnalysisInsight", b =>
+                {
+                    b.HasOne("MarketPulse.Domain.Entities.AnalysisResult", "AnalysisResult")
+                        .WithMany("Insights")
+                        .HasForeignKey("AnalysisResultId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AnalysisResult");
+                });
+
             modelBuilder.Entity("MarketPulse.Domain.Entities.AnalysisResult", b =>
                 {
                     b.HasOne("MarketPulse.Domain.Entities.AnalysisRequest", "Request")
@@ -282,6 +358,11 @@ namespace MarketPulse.Infrastructure.Persistence.Migrations
                     b.Navigation("Request");
                 });
 
+            modelBuilder.Entity("MarketPulse.Domain.Entities.AnalysisInsight", b =>
+                {
+                    b.Navigation("Evidence");
+                });
+
             modelBuilder.Entity("MarketPulse.Domain.Entities.AnalysisRequest", b =>
                 {
                     b.Navigation("CollectedMarketItems");
@@ -291,6 +372,16 @@ namespace MarketPulse.Infrastructure.Persistence.Migrations
                     b.Navigation("Result");
 
                     b.Navigation("SearchQueries");
+                });
+
+            modelBuilder.Entity("MarketPulse.Domain.Entities.AnalysisResult", b =>
+                {
+                    b.Navigation("Insights");
+                });
+
+            modelBuilder.Entity("MarketPulse.Domain.Entities.CollectedMarketItem", b =>
+                {
+                    b.Navigation("AnalysisEvidence");
                 });
 #pragma warning restore 612, 618
         }

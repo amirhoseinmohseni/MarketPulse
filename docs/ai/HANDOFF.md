@@ -2,26 +2,110 @@
 
 ## Last updated
 
-2026-07-20
+2026-07-24
 
 ## Current status
 
-The repository is a .NET 8 Clean Architecture-style API. Analysis requests are persisted, queued, processed by `AnalysisWorker`, enriched with AI-generated search queries and enabled data collectors, and exposed through `POST /api/analysis` and `GET /api/analysis/{id}`. The final `AnalysisGenerator` output is still simulated with a random score and static text.
+All four Market Insight phases are complete. `AnalysisWorker` now delegates queue items to `IAnalysisRequestProcessor`, which orchestrates query reuse/generation, collection, the evidence-grounded `IAnalysisGenerator`, and final state persistence. The worker has no direct AI/OpenRouter dependency.
+
+The pipeline loads only the request's `CollectedMarketItem` records, filters and orders them deterministically, applies configured item/text budgets, assigns temporary IDs such as `C001`, and retains an internal mapping to real database IDs. Application code independently evaluates the maximum allowed signal strength before any provider call.
+
+If no usable item exists, no AI client is called and the generator returns an honest Weak result with a null score and no insights. With usable data, Application builds injection-resistant system/user prompts and a strict JSON Schema, then parses and validates the raw provider response before creating domain entities.
+
+## Phase 3 provider behavior
+
+- The OpenRouter Chat Completions request contains exactly the Application system and user messages.
+- `response_format.type` is `json_schema`; the Application schema is forwarded unchanged with `strict=true`.
+- `provider.require_parameters=true` prevents routing to providers that ignore structured-output parameters.
+- API key, endpoint, model, temperature, token limit, timeout, retry count, and base retry delay come from configuration.
+- Only HTTP 429 and 503 are retried, with a finite configured retry count.
+- Standard `Retry-After` delta/date values take precedence over exponential fallback delay.
+- HTTP errors, HTTP-200 error envelopes, choices, finish reason, refusal, content type, empty content, malformed JSON, and truncated output are checked defensively.
+- Prompts, collected content, API keys, provider response bodies, and full generated responses are not logged.
+
+## Phase 4 processing behavior
+
+- `IAnalysisProcessingStateStore` conditionally claims Pending/Failed requests and skips Completed or currently Processing requests.
+- Existing search queries are reused during reprocessing.
+- Result, insight/evidence graph, and Completed status are persisted in one explicit transaction.
+- The final write locks the request row and rechecks for an existing result before insertion.
+- The EF one-to-one unique relationship remains a database-level duplicate-result safeguard.
+- Every evidence FK is revalidated against collected items owned by the same request before persistence.
+- A failed final write rolls back; the change tracker is cleared before the request is marked Failed.
+- Provider and validation failures mark the request Failed.
+- Shutdown cancellation propagates out of collectors/provider/processor and does not mark the request Failed.
+- No-data requests complete with an honest Weak/null-score result.
+- GET evidence metadata comes from `CollectedMarketItem`; `Reason` is built from persisted insight text.
+
+## Phase 1 schema
+
+```text
+AnalysisRequest
+  -> AnalysisResult
+       -> AnalysisInsight
+            -> AnalysisEvidence
+                 -> CollectedMarketItem
+```
+
+- `AnalysisInsight.Type` distinguishes Strength, Weakness, Opportunity, and Risk.
+- `AnalysisInsight.Position` preserves deterministic ordering within each category.
+- `AnalysisEvidence` has a real foreign key to `CollectedMarketItem`.
+- Duplicate evidence references within one insight are prevented by a unique index.
+- Database check constraints protect score, signal strength, insight type, and position ranges.
+
+## Migration behavior
+
+`AddEvidenceBasedMarketInsights` creates the relational insight/evidence schema before removing the legacy text columns. Existing semicolon-delimited Strengths, Weaknesses, Opportunities, and Risks are split and copied into ordered `AnalysisInsight` rows.
+
+Legacy results are assigned `SignalStrength.Weak`. No evidence is fabricated for legacy insights because the old rows contain no traceable source relationship. The down migration reconstructs the legacy text fields before dropping the new tables.
+
+## Phase 2 validation behavior
+
+- MarketScore must be null or between 0 and 100.
+- SignalStrength must be Weak, Moderate, or Strong and is capped by Application's deterministic assessment.
+- A final Weak signal cannot retain a market score.
+- Summary and insight text must be non-empty and within configured limits.
+- Insight and evidence counts are bounded.
+- Every insight must reference at least one unique temporary evidence ID.
+- Unknown or fabricated evidence IDs reject the entire response.
+- Only validated IDs are converted to `CollectedMarketItemId` foreign keys.
+- Weak input volume or diversity is explicitly reflected in the persisted summary.
+
+## Configuration
+
+Application limits and signal thresholds are read from `MarketInsightAnalysis` configuration. Checked-in defaults cover item count, idea/source/title/content lengths, total item characters, signal thresholds, insight counts, evidence counts, and response text lengths.
+
+OpenRouter transport settings are read from `OpenRouter`. In addition to the existing endpoint/model/temperature/token settings, phase 3 adds `TimeoutSeconds`, `MaxRetryAttempts`, and `RetryBaseDelayMilliseconds`. Docker Compose and `.env.example` contain placeholder/default mappings only.
 
 ## Next task
 
-Define the real analysis output contract, implement evidence-based analysis behind an Application abstraction with an Infrastructure OpenRouter provider, and add tests for parsing, provider failures, and request status transitions.
+Market Insight implementation is complete. The next reliability increment should replace or supplement the in-process queue with durable delivery and add stale-Processing recovery plus live PostgreSQL/OpenRouter integration coverage.
 
 ## Verification
 
-- Build: `dotnet build MarketPulse.sln --no-restore` passed with 0 warnings and 0 errors.
-- Tests: no test project or test files currently exist.
-- Runtime/API smoke test: not run.
+- Build: `dotnet build MarketPulse.sln --no-restore -p:NuGetAudit=false` passed with 0 warnings and 0 errors.
+- Tests: 48 unit/model/pipeline/provider/processor/API tests passed.
+- EF model: `dotnet ef migrations has-pending-model-changes` reported no pending changes.
+- Migration SQL: forward script generation from `AddCollectedMarketItems` to `AddEvidenceBasedMarketInsights` passed.
+- Runtime migration against a live PostgreSQL database was not run.
 
 ## Important files
 
-- `MarketPulse.Application/Services/Analyser/AnalysisGenerator.cs`
-- `MarketPulse.Application/Workers/AnalysisWorker.cs`
-- `MarketPulse.Application/Services/SearchQueryGenerator/`
-- `MarketPulse.Infrastructure/AI/`
+- `MarketPulse.Domain/Entities/AnalysisResult.cs`
+- `MarketPulse.Domain/Entities/AnalysisInsight.cs`
+- `MarketPulse.Domain/Entities/AnalysisEvidence.cs`
 - `MarketPulse.Infrastructure/Persistence/ApplicationDbContext.cs`
+- `MarketPulse.Infrastructure/Persistence/Migrations/20260724163611_AddEvidenceBasedMarketInsights.cs`
+- `MarketPulse.Application/Dtos/AnalysisResultDto.cs`
+- `MarketPulse.Application/Services/Analyser/IAiMarketInsightClient.cs`
+- `MarketPulse.Application/Services/Analyser/AnalysisGenerator.cs`
+- `MarketPulse.Application/Services/Analyser/MarketInsightInputBuilder.cs`
+- `MarketPulse.Application/Services/Analyser/MarketInsightSignalEvaluator.cs`
+- `MarketPulse.Application/Services/Analyser/MarketInsightPromptBuilder.cs`
+- `MarketPulse.Application/Services/Analyser/MarketInsightResponseParser.cs`
+- `MarketPulse.Application/Services/AnalysisProcessing/AnalysisRequestProcessor.cs`
+- `MarketPulse.Application/Workers/AnalysisWorker.cs`
+- `MarketPulse.Infrastructure/AI/OpenRouterAiMarketInsightClient.cs`
+- `MarketPulse.Infrastructure/AI/OpenRouterOptions.cs`
+- `MarketPulse.Infrastructure/Persistence/AnalysisProcessingStateStore.cs`
+- `tests/MarketPulse.UnitTests/`

@@ -1,4 +1,6 @@
-﻿using MarketPulse.Application.Dtos;
+using MarketPulse.Application.Dtos;
+using MarketPulse.Domain.Entities;
+using MarketPulse.Domain.Enums;
 using MarketPulse.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 
@@ -30,7 +32,7 @@ namespace MarketPulse.Application.Services.AnalysisRequest
             {
                 Id = requestId,
                 Idea = requestDto.Idea,
-                Status = Domain.Enums.AnalysisStatus.Pending,
+                Status = AnalysisStatus.Pending,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -78,18 +80,7 @@ namespace MarketPulse.Application.Services.AnalysisRequest
             if (request.Result != null)
             {
                 _logger.LogInformation("Returning completed analysis result for ID: {RequestId}", requestId);
-
-                requestDto.Result = new AnalysisResultDto
-                {
-                    AnalysisRequestId = requestId,
-                    Id = request.Result.Id,
-                    MarketScore = request.Result.MarketScore,
-                    Opportunities = request.Result.Opportunities,
-                    Risks = request.Result.Risks,
-                    Strengths = request.Result.Strengths,
-                    Summary = request.Result.Summary,
-                    Weaknesses = request.Result.Weaknesses
-                };
+                requestDto.Result = MapResult(request.Result);
             }
             else
             {
@@ -98,5 +89,74 @@ namespace MarketPulse.Application.Services.AnalysisRequest
 
             return requestDto;
         }
+
+        private static AnalysisResultDto MapResult(AnalysisResult result)
+        {
+            var evidence = result.Insights
+                .SelectMany(insight => insight.Evidence.Select(reference => new
+                {
+                    Insight = insight,
+                    Reference = reference
+                }))
+                .Where(x => x.Reference.CollectedMarketItem is not null)
+                .GroupBy(x => x.Reference.CollectedMarketItemId)
+                .Select(group =>
+                {
+                    var item = group.First().Reference.CollectedMarketItem!;
+                    var reason = string.Join(
+                        " ",
+                        group
+                            .OrderBy(x => x.Insight.Type)
+                            .ThenBy(x => x.Insight.Position)
+                            .Select(x => x.Insight.Text.Trim())
+                            .Where(x => x.Length > 0)
+                            .Distinct(StringComparer.Ordinal));
+
+                    return new AnalysisEvidenceDto
+                    {
+                        CollectedMarketItemId = item.Id,
+                        Source = item.Source,
+                        Title = item.Title,
+                        Url = item.Url,
+                        Permalink = item.Permalink,
+                        Reason = reason
+                    };
+                })
+                .OrderBy(x => x.Source)
+                .ThenBy(x => x.Title)
+                .ThenBy(x => x.CollectedMarketItemId)
+                .ToList();
+
+            return new AnalysisResultDto
+            {
+                AnalysisRequestId = result.AnalysisRequestId,
+                Id = result.Id,
+                MarketScore = result.MarketScore,
+                SignalStrength = result.SignalStrength,
+                Summary = result.Summary,
+                Strengths = MapInsights(result, InsightType.Strength),
+                Weaknesses = MapInsights(result, InsightType.Weakness),
+                Opportunities = MapInsights(result, InsightType.Opportunity),
+                Risks = MapInsights(result, InsightType.Risk),
+                Evidence = evidence
+            };
+        }
+
+        private static List<AnalysisInsightDto> MapInsights(
+            AnalysisResult result,
+            InsightType type)
+            => result.Insights
+                .Where(x => x.Type == type)
+                .OrderBy(x => x.Position)
+                .Select(x => new AnalysisInsightDto
+                {
+                    Id = x.Id,
+                    Text = x.Text,
+                    EvidenceIds = x.Evidence
+                        .Select(evidence => evidence.CollectedMarketItemId)
+                        .Distinct()
+                        .ToList()
+                })
+                .ToList();
     }
 }

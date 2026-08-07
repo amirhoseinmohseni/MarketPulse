@@ -31,5 +31,7 @@ namespace MarketPulse.Domain.Entities
         public DateTime CollectedAt { get; set; } = DateTime.UtcNow;
 
         public string? RawDataJson { get; set; }
+
+        public List<AnalysisEvidence> AnalysisEvidence { get; set; } = new();
     }
 }
