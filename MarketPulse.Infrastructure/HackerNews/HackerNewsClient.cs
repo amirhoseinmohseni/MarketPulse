@@ -35,7 +35,7 @@ namespace MarketPulse.Infrastructure.HackerNews
             if (!response.IsSuccessStatusCode)
             {
                 throw new HttpRequestException(
-                    $"Hacker News search request failed with status code {(int)response.StatusCode} ({response.StatusCode}). Response body: {responseBody}",
+                    $"Hacker News search request failed with status code {(int)response.StatusCode} ({response.StatusCode}).",
                     null,
                     response.StatusCode);
             }

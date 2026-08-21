@@ -14,6 +14,10 @@ Search-query generation now sends an Application-owned strict JSON Schema throug
 
 The integration suite found and fixed a priority-ordering defect in `SearchQueryRepository`: priority 1 is highest, so generated queries are now read in ascending numeric priority order.
 
+Data-collector test phases 3-5 add 68 deterministic unit tests for collector selection/orchestration, search-query persistence, Hacker News, and Reddit. All HTTP behavior uses controlled handlers; Reddit credentials and tokens used in tests are generated at runtime. The tests cover mapping, limits, URL encoding, deduplication, persistence boundaries, cancellation, OAuth token caching/refresh, deterministic concurrent token requests, and sanitized failures without calling live providers.
+
+The collector tests found that raw external response bodies and exception messages could reach exceptions, orchestration results, or logs. Hacker News and Reddit HTTP failures now expose status only, and non-fail-fast orchestration returns and logs a generic collector failure without the original exception object.
+
 The pipeline loads only the request's `CollectedMarketItem` records, filters and orders them deterministically, applies configured item/text budgets, assigns temporary IDs such as `C001`, and retains an internal mapping to real database IDs. Application code independently evaluates the maximum allowed signal strength before any provider call.
 
 If no usable item exists, no AI client is called and the generator returns an honest Weak result with a null score and no insights. With usable data, Application builds injection-resistant system/user prompts and a strict JSON Schema, then parses and validates the raw provider response before creating domain entities.
@@ -85,12 +89,12 @@ OpenRouter transport settings are read from `OpenRouter`. In addition to the exi
 
 ## Next task
 
-Persistence integration coverage is complete. The next test increment should cover data-collector orchestration and the Hacker News/Reddit clients and collectors; the next runtime reliability increment remains durable delivery and stale-Processing recovery.
+Persistence and data-collector coverage are complete. The next test increment should cover the API/worker boundary and the complete queued analysis workflow; the next runtime reliability increment remains durable delivery and stale-Processing recovery.
 
 ## Verification
 
 - Build: `dotnet build MarketPulse.sln --no-restore -p:NuGetAudit=false` passed with 0 warnings and 0 errors.
-- Tests: 60 unit/model/pipeline/provider/processor/API tests passed.
+- Tests: 128 unit/model/pipeline/provider/processor/API/collector tests passed, including 68 tests added for phases 3-5.
 - PostgreSQL integration tests: 30 passed against disposable PostgreSQL 18 with real migrations.
 - EF model: `dotnet ef migrations has-pending-model-changes` reported no pending changes.
 - Migration SQL: forward script generation from `AddCollectedMarketItems` to `AddEvidenceBasedMarketInsights` passed.
@@ -117,8 +121,20 @@ Persistence integration coverage is complete. The next test increment should cov
 - `MarketPulse.Infrastructure/AI/OpenRouterAiSearchQueryClient.cs`
 - `MarketPulse.Infrastructure/AI/OpenRouterAiMarketInsightClient.cs`
 - `MarketPulse.Infrastructure/AI/OpenRouterOptions.cs`
+- `MarketPulse.Application/Services/DataCollection/DataCollectionOrchestrator.cs`
+- `MarketPulse.Infrastructure/HackerNews/HackerNewsClient.cs`
+- `MarketPulse.Infrastructure/Reddit/RedditAccessTokenProvider.cs`
+- `MarketPulse.Infrastructure/Reddit/RedditClient.cs`
 - `MarketPulse.Infrastructure/Persistence/AnalysisProcessingStateStore.cs`
 - `tests/MarketPulse.IntegrationTests/Infrastructure/PostgreSqlIntegrationFixture.cs`
 - `tests/MarketPulse.IntegrationTests/Persistence/AnalysisProcessingStateStoreTests.cs`
 - `tests/MarketPulse.IntegrationTests/Persistence/RepositoryIntegrationTests.cs`
+- `tests/MarketPulse.UnitTests/Application/DataCollectionOrchestratorTests.cs`
+- `tests/MarketPulse.UnitTests/Application/DataCollectorFactoryTests.cs`
+- `tests/MarketPulse.UnitTests/Application/SearchQueryGenerationServiceTests.cs`
+- `tests/MarketPulse.UnitTests/Infrastructure/HackerNewsClientTests.cs`
+- `tests/MarketPulse.UnitTests/Infrastructure/HackerNewsDataCollectorTests.cs`
+- `tests/MarketPulse.UnitTests/Infrastructure/RedditAccessTokenProviderTests.cs`
+- `tests/MarketPulse.UnitTests/Infrastructure/RedditClientTests.cs`
+- `tests/MarketPulse.UnitTests/Infrastructure/RedditDataCollectorTests.cs`
 - `tests/MarketPulse.UnitTests/`

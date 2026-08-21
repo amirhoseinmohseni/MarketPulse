@@ -80,6 +80,12 @@
 - **Reason:** Providers can be enabled or disabled without changing orchestration code.
 - **Consequence:** Collector registration, source naming, and configuration keys must remain aligned.
 
+### Sanitized external data-collector failures
+
+- **Decision:** Hacker News and Reddit transport exceptions expose HTTP status only, and non-fail-fast orchestration records a generic failure without logging the exception object or returning its message.
+- **Reason:** External response bodies and exception details may contain credentials, provider diagnostics, collected content, or other sensitive data.
+- **Consequence:** Detailed provider bodies are intentionally unavailable through application results and normal logs; troubleshooting must use safe status/source metadata and controlled local diagnostics.
+
 ## Historical or future decisions
 
 No additional architectural decisions have been formally recorded yet. Add significant decisions here or create a numbered ADR under `docs/ai/adr/`.

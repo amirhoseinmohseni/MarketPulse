@@ -79,7 +79,7 @@ namespace MarketPulse.Infrastructure.Reddit
 
             if (!response.IsSuccessStatusCode)
             {
-                throw CreateRedditAuthException(response.StatusCode, responseBody);
+                throw CreateRedditAuthException(response.StatusCode);
             }
 
             var tokenResponse = JsonSerializer.Deserialize<RedditTokenResponse>(responseBody, JsonOptions);
@@ -127,11 +127,10 @@ namespace MarketPulse.Infrastructure.Reddit
         }
 
         private static HttpRequestException CreateRedditAuthException(
-            HttpStatusCode statusCode,
-            string responseBody)
+            HttpStatusCode statusCode)
         {
             return new HttpRequestException(
-                $"Reddit token request failed with status code {(int)statusCode} ({statusCode}). Response body: {responseBody}",
+                $"Reddit token request failed with status code {(int)statusCode} ({statusCode}).",
                 null,
                 statusCode);
         }

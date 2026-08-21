@@ -43,7 +43,7 @@ namespace MarketPulse.Infrastructure.Reddit
 
             if (!response.IsSuccessStatusCode)
             {
-                throw CreateRedditException(response.StatusCode, responseBody);
+                throw CreateRedditException(response.StatusCode);
             }
 
             var listing = JsonSerializer.Deserialize<RedditListingResponse>(responseBody, JsonOptions);
@@ -118,11 +118,10 @@ namespace MarketPulse.Infrastructure.Reddit
             };
 
         private static HttpRequestException CreateRedditException(
-            HttpStatusCode statusCode,
-            string responseBody)
+            HttpStatusCode statusCode)
         {
             return new HttpRequestException(
-                $"Reddit search request failed with status code {(int)statusCode} ({statusCode}). Response body: {responseBody}",
+                $"Reddit search request failed with status code {(int)statusCode} ({statusCode}).",
                 null,
                 statusCode);
         }

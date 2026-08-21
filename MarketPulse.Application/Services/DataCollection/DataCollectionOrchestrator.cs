@@ -54,9 +54,12 @@ namespace MarketPulse.Application.Services.DataCollection
                 {
                     throw;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    _logger.LogError(ex, "Data collector {SourceName} failed for request {RequestId}.", collector.SourceName, analysisRequestId);
+                    _logger.LogError(
+                        "Data collector {SourceName} failed for request {RequestId}.",
+                        collector.SourceName,
+                        analysisRequestId);
 
                     if (_options.FailFast)
                     {
@@ -68,7 +71,7 @@ namespace MarketPulse.Application.Services.DataCollection
                         SourceName = collector.SourceName,
                         ItemsCollected = 0,
                         Succeeded = false,
-                        ErrorMessage = ex.Message
+                        ErrorMessage = "Data collector failed."
                     });
                 }
             }

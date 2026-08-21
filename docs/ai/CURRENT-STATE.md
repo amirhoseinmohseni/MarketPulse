@@ -27,10 +27,14 @@
 - GET evidence includes database-backed source/title/URL/permalink metadata plus a reason derived from the persisted supporting insight.
 - Hacker News data collection is implemented and enabled by the checked-in default configuration.
 - Reddit integration is implemented but disabled by default.
+- Data-collector selection, orchestration, and search-query persistence have deterministic unit coverage, including failure policy and cancellation behavior.
+- Hacker News HTTP mapping, validation, failure sanitization, cancellation, deduplication, and persistence have deterministic unit coverage without live API calls.
+- Reddit OAuth token caching/refresh/concurrency, HTTP mapping, failure sanitization, cancellation, deduplication, and persistence have deterministic unit coverage without live API calls or real credentials.
+- External collector response bodies and exception details are not returned in orchestration errors or written to collector failure logs.
 - The solution includes unit and EF model tests.
 - Live PostgreSQL tests cover processing claims, concurrency, atomic completion and rollback, evidence ownership, failure transitions, repository filtering/loading, and database uniqueness constraints.
 - `dotnet build MarketPulse.sln --no-restore` passed with 0 warnings and 0 errors on the verification date.
-- All 60 unit/model/pipeline/provider/processor/API tests and all 30 PostgreSQL integration tests pass.
+- All 128 unit/model/pipeline/provider/processor/API/collector tests and all 30 PostgreSQL integration tests pass.
 
 ## Incomplete or not yet integrated
 

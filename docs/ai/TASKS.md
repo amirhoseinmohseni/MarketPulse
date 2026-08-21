@@ -39,6 +39,10 @@ This file tracks repository work. Update it when a task starts or is completed.
 - [x] Phase 4: add processor, failure, cancellation, duplicate, EF, DTO, and API tests.
 - [x] Add disposable PostgreSQL 18 integration-test infrastructure with real EF migrations.
 - [x] Add live PostgreSQL integration coverage for processing state, transactions, evidence ownership, repositories, and database uniqueness constraints.
+- [x] Add unit coverage for data-collector selection, orchestration, and search-query persistence.
+- [x] Add deterministic HTTP and collector unit coverage for Hacker News.
+- [x] Add deterministic OAuth, HTTP, concurrency, and collector unit coverage for Reddit.
+- [x] Sanitize data-collector failures so external response bodies and exception details are not exposed through orchestration results or logs.
 
 ## In progress
 
@@ -47,6 +51,7 @@ This file tracks repository work. Update it when a task starts or is completed.
 ## Planned
 
 - [ ] Add live PostgreSQL worker integration tests on top of the completed persistence fixture.
+- [ ] Add API/worker integration coverage for the complete queued analysis workflow.
 - [ ] Replace the in-process queue or add durable delivery and stale-Processing recovery.
 - [ ] Decide and implement the remaining MVP capabilities: sentiment, competitor extraction, pain points, and scoring.
 - [ ] Add Product Hunt integration if it remains in product scope.
