@@ -2,11 +2,13 @@
 
 ## Last updated
 
-2026-07-24
+2026-08-21
 
 ## Current status
 
 All four Market Insight phases are complete. `AnalysisWorker` now delegates queue items to `IAnalysisRequestProcessor`, which orchestrates query reuse/generation, collection, the evidence-grounded `IAnalysisGenerator`, and final state persistence. The worker has no direct AI/OpenRouter dependency.
+
+Search-query generation now sends an Application-owned strict JSON Schema through OpenRouter structured output. Application requires the exact response object/item shape, filters only semantically invalid individual queries (blank text, invalid category/priority, or case-insensitive duplicates), then rejects the response unless 8-12 valid unique queries remain and all four categories are represented.
 
 The pipeline loads only the request's `CollectedMarketItem` records, filters and orders them deterministically, applies configured item/text budgets, assigns temporary IDs such as `C001`, and retains an internal mapping to real database IDs. Application code independently evaluates the maximum allowed signal strength before any provider call.
 
@@ -84,7 +86,7 @@ Market Insight implementation is complete. The next reliability increment should
 ## Verification
 
 - Build: `dotnet build MarketPulse.sln --no-restore -p:NuGetAudit=false` passed with 0 warnings and 0 errors.
-- Tests: 48 unit/model/pipeline/provider/processor/API tests passed.
+- Tests: 60 unit/model/pipeline/provider/processor/API tests passed.
 - EF model: `dotnet ef migrations has-pending-model-changes` reported no pending changes.
 - Migration SQL: forward script generation from `AddCollectedMarketItems` to `AddEvidenceBasedMarketInsights` passed.
 - Runtime migration against a live PostgreSQL database was not run.
@@ -104,7 +106,10 @@ Market Insight implementation is complete. The next reliability increment should
 - `MarketPulse.Application/Services/Analyser/MarketInsightPromptBuilder.cs`
 - `MarketPulse.Application/Services/Analyser/MarketInsightResponseParser.cs`
 - `MarketPulse.Application/Services/AnalysisProcessing/AnalysisRequestProcessor.cs`
+- `MarketPulse.Application/Services/SearchQueryGenerator/AiQueryGenerator.cs`
+- `MarketPulse.Application/Services/SearchQueryGenerator/InvalidAiSearchQueryResponseException.cs`
 - `MarketPulse.Application/Workers/AnalysisWorker.cs`
+- `MarketPulse.Infrastructure/AI/OpenRouterAiSearchQueryClient.cs`
 - `MarketPulse.Infrastructure/AI/OpenRouterAiMarketInsightClient.cs`
 - `MarketPulse.Infrastructure/AI/OpenRouterOptions.cs`
 - `MarketPulse.Infrastructure/Persistence/AnalysisProcessingStateStore.cs`

@@ -32,6 +32,12 @@
 - **Reason:** OpenRouter can otherwise route to a provider that ignores unsupported parameters, weakening the structured-output guarantee.
 - **Consequence:** Requests fail when no compatible route exists instead of silently accepting a provider that cannot enforce the schema.
 
+### Search-query set validation after item filtering
+
+- **Decision:** Treat the AI response shape as strict, remove only semantically invalid individual search queries, compare duplicates after trimming with case-insensitive ordinal matching, and validate count/category rules on the remaining set.
+- **Reason:** Hacker News Algolia and Reddit search do not gain a distinct intent from casing-only query variants, while one malformed query should not discard an otherwise usable response.
+- **Consequence:** The response fails unless 8-12 valid unique queries remain and Problem, Competitor, Solution, and Discussion are all represented; structural JSON deviations fail immediately.
+
 ### Bounded provider retry without sensitive response logging
 
 - **Decision:** Retry only HTTP 429 and 503, honor `Retry-After`, cap retry attempts from configuration, and never include full provider bodies or prompts in logs/exceptions.

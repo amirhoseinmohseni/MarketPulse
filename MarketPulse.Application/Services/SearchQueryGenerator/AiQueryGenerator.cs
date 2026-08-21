@@ -1,11 +1,21 @@
 using MarketPulse.Domain.Entities;
 using MarketPulse.Domain.Enums;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MarketPulse.Application.Services.SearchQueryGenerator
 {
     public class AiQueryGenerator : ISearchQueryGenerator
     {
+        private const int MinimumQueryCount = 8;
+        private const int MaximumQueryCount = 12;
+
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = false,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
+        };
+
         private readonly IAiSearchQueryClient _aiClient;
 
         public AiQueryGenerator(IAiSearchQueryClient aiClient)
@@ -52,6 +62,8 @@ namespace MarketPulse.Application.Services.SearchQueryGenerator
                 - Do not include source names unless they are genuinely part of the product idea: reddit, subreddit, forum, hacker news, product hunt.
                 - Avoid long phrases such as "best alternatives to", "user complaints about", "pain points with".
                 - Prefer core concepts, user segments, workflows, technologies, and problem keywords.
+                - Include at least one query from every category.
+                - Do not repeat a query, including with different letter casing.
 
                 Return this JSON shape:
                 {
@@ -67,42 +79,154 @@ namespace MarketPulse.Application.Services.SearchQueryGenerator
                 Priority must be between 1 and 5, where 1 is highest priority.
                 """;
 
-            return new AiSearchQueryPrompt(systemPrompt, userPrompt);
+            return new AiSearchQueryPrompt(
+                systemPrompt,
+                userPrompt,
+                "search_queries",
+                BuildResponseSchema());
         }
 
         private static List<SearchQuery> ParseSearchQueries(string json)
         {
-            using var document = JsonDocument.Parse(json);
-            var root = document.RootElement;
-
-            var queriesElement = root.ValueKind == JsonValueKind.Array
-                ? root
-                : root.GetProperty("queries");
-
-            var queries = new List<SearchQuery>();
-
-            foreach (var item in queriesElement.EnumerateArray())
+            if (string.IsNullOrWhiteSpace(json))
             {
+                throw new InvalidAiSearchQueryResponseException(
+                    "The AI search-query response was empty.");
+            }
+
+            AiSearchQueryResponse response;
+            try
+            {
+                response = JsonSerializer.Deserialize<AiSearchQueryResponse>(json, JsonOptions)
+                    ?? throw new InvalidAiSearchQueryResponseException(
+                        "The AI search-query response was null.");
+            }
+            catch (JsonException exception)
+            {
+                throw new InvalidAiSearchQueryResponseException(
+                    "The AI response did not match the required search-query JSON structure.",
+                    exception);
+            }
+
+            if (response.Queries is null || response.Queries.Any(item => item is null))
+            {
+                throw new InvalidAiSearchQueryResponseException(
+                    "The AI response did not match the required search-query JSON structure.");
+            }
+
+            var queries = new List<SearchQuery>(response.Queries.Count);
+            var seenQueries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in response.Queries)
+            {
+                if (item!.Query is null || item.Category is null)
+                {
+                    throw new InvalidAiSearchQueryResponseException(
+                        "The AI response did not match the required search-query JSON structure.");
+                }
+
+                var queryText = item.Query.Trim();
+                if (string.IsNullOrWhiteSpace(queryText)
+                    || item.Priority is < 1 or > 5
+                    || !TryParseCategory(item.Category, out var category)
+                    || !seenQueries.Add(queryText))
+                {
+                    continue;
+                }
+
                 queries.Add(new SearchQuery
                 {
                     Id = Guid.NewGuid(),
-                    Query = item.GetProperty("query").GetString()!,
-                    Category = ParseCategory(item.GetProperty("category")),
-                    Priority = item.GetProperty("priority").GetInt32()
+                    Query = queryText,
+                    Category = category,
+                    Priority = item.Priority
                 });
             }
 
+            ValidateFinalQuerySet(queries);
             return queries;
         }
 
-        private static QueryCategory ParseCategory(JsonElement element)
+        private static void ValidateFinalQuerySet(IReadOnlyCollection<SearchQuery> queries)
         {
-            if (element.ValueKind == JsonValueKind.Number)
+            if (queries.Count is < MinimumQueryCount or > MaximumQueryCount)
             {
-                return (QueryCategory)element.GetInt32();
+                throw new InvalidAiSearchQueryResponseException(
+                    $"The AI response must contain between {MinimumQueryCount} and {MaximumQueryCount} valid unique queries.");
             }
 
-            return Enum.Parse<QueryCategory>(element.GetString()!, ignoreCase: true);
+            var missingCategories = Enum.GetValues<QueryCategory>()
+                .Where(category => queries.All(query => query.Category != category))
+                .ToArray();
+
+            if (missingCategories.Length > 0)
+            {
+                throw new InvalidAiSearchQueryResponseException(
+                    "The AI response must contain at least one valid query from every category.");
+            }
+        }
+
+        private static bool TryParseCategory(
+            string category,
+            out QueryCategory parsedCategory)
+        {
+            parsedCategory = category switch
+            {
+                "Problem" => QueryCategory.Problem,
+                "Competitor" => QueryCategory.Competitor,
+                "Solution" => QueryCategory.Solution,
+                "Discussion" => QueryCategory.Discussion,
+                _ => default
+            };
+
+            return category is "Problem" or "Competitor" or "Solution" or "Discussion";
+        }
+
+        private static string BuildResponseSchema()
+            => $$"""
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["queries"],
+                  "properties": {
+                    "queries": {
+                      "type": "array",
+                      "minItems": {{MinimumQueryCount}},
+                      "maxItems": {{MaximumQueryCount}},
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["query", "category", "priority"],
+                        "properties": {
+                          "query": { "type": "string" },
+                          "category": {
+                            "type": "string",
+                            "enum": ["Problem", "Competitor", "Solution", "Discussion"]
+                          },
+                          "priority": { "type": "integer", "minimum": 1, "maximum": 5 }
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+        private sealed class AiSearchQueryResponse
+        {
+            [JsonPropertyName("queries")]
+            public required List<AiSearchQueryItem?> Queries { get; init; }
+        }
+
+        private sealed class AiSearchQueryItem
+        {
+            [JsonPropertyName("query")]
+            public required string? Query { get; init; }
+
+            [JsonPropertyName("category")]
+            public required string? Category { get; init; }
+
+            [JsonPropertyName("priority")]
+            public required int Priority { get; init; }
         }
     }
 }

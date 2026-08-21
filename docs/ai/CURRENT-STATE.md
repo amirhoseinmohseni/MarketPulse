@@ -2,7 +2,7 @@
 
 ## Verified on
 
-2026-07-24
+2026-08-21
 
 ## Complete or implemented
 
@@ -14,6 +14,7 @@
 - PostgreSQL persistence and EF Core migrations are present.
 - An in-process background queue and `AnalysisWorker` are registered.
 - AI search query generation is implemented behind Application interfaces and uses OpenRouter in Infrastructure.
+- Search-query generation uses strict JSON Schema output, removes invalid or case-insensitively duplicated individual queries, and rejects final sets outside 8-12 queries or missing any required category.
 - The provider-neutral Market Insight Application pipeline is implemented. It builds bounded deterministic input, evaluates signal quality, creates a grounded prompt and strict response schema, validates AI JSON, and maps temporary evidence IDs to real collected item IDs.
 - `IAiMarketInsightClient` is implemented in Infrastructure with OpenRouter Chat Completions, strict JSON Schema output, structured-output-compatible routing, bounded transient retry, configured timeout, and defensive response-envelope validation.
 - Empty or unusable collected datasets complete the analysis-generation step without an AI call and produce an honest Weak result with a null score.
@@ -27,7 +28,7 @@
 - Reddit integration is implemented but disabled by default.
 - The solution includes unit and EF model tests.
 - `dotnet build MarketPulse.sln --no-restore` passed with 0 warnings and 0 errors on the verification date.
-- All 48 unit/model/pipeline/provider/processor/API tests pass.
+- All 60 unit/model/pipeline/provider/processor/API tests pass.
 
 ## Incomplete or not yet integrated
 

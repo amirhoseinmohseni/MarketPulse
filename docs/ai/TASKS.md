@@ -9,6 +9,7 @@ This file tracks repository work. Update it when a task starts or is completed.
 - [x] Analysis request creation and retrieval endpoints.
 - [x] Background processing queue and worker.
 - [x] OpenRouter-backed search query generation abstraction.
+- [x] Enforce strict structured search-query output, filter invalid individual queries, and validate the final 8-12/category-complete set.
 - [x] Hacker News collector.
 - [x] Reddit client and collector implementation.
 - [x] Define the evidence-based Market Insight domain contract.
