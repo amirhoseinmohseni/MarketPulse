@@ -37,6 +37,8 @@ This file tracks repository work. Update it when a task starts or is completed.
 - [x] Phase 4: distinguish shutdown cancellation from provider/validation failures.
 - [x] Phase 4: expose database-backed evidence metadata and Reason through GET analysis.
 - [x] Phase 4: add processor, failure, cancellation, duplicate, EF, DTO, and API tests.
+- [x] Add disposable PostgreSQL 18 integration-test infrastructure with real EF migrations.
+- [x] Add live PostgreSQL integration coverage for processing state, transactions, evidence ownership, repositories, and database uniqueness constraints.
 
 ## In progress
 
@@ -44,7 +46,7 @@ This file tracks repository work. Update it when a task starts or is completed.
 
 ## Planned
 
-- [ ] Add live PostgreSQL worker/persistence integration tests.
+- [ ] Add live PostgreSQL worker integration tests on top of the completed persistence fixture.
 - [ ] Replace the in-process queue or add durable delivery and stale-Processing recovery.
 - [ ] Decide and implement the remaining MVP capabilities: sentiment, competitor extraction, pain points, and scoring.
 - [ ] Add Product Hunt integration if it remains in product scope.

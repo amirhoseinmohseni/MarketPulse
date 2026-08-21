@@ -56,6 +56,12 @@
 - **Reason:** A request must never expose Completed without its result/evidence, and redelivery must not create a second result.
 - **Consequence:** The one-to-one database relationship remains the final uniqueness guard, evidence ownership is revalidated, and failure-state updates clear rolled-back tracked entities first.
 
+### Persistence integration tests use disposable PostgreSQL
+
+- **Decision:** Run persistence and processing-state integration tests against a disposable PostgreSQL 18 Testcontainer with real EF migrations rather than EF InMemory or SQLite.
+- **Reason:** The production path depends on PostgreSQL transactions, row locks, raw SQL, provider query translation, and database constraints that substitutes cannot reproduce reliably.
+- **Consequence:** Integration tests require Docker, share one non-parallel container per test collection, reset application tables between tests, and never depend on development credentials or databases.
+
 ### Evidence reason is derived, not provider metadata
 
 - **Decision:** The API `Reason` field is derived from persisted insight text supporting a collected item; source/title/URL/permalink are read from `CollectedMarketItem`.

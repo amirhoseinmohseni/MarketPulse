@@ -10,6 +10,10 @@ All four Market Insight phases are complete. `AnalysisWorker` now delegates queu
 
 Search-query generation now sends an Application-owned strict JSON Schema through OpenRouter structured output. Application requires the exact response object/item shape, filters only semantically invalid individual queries (blank text, invalid category/priority, or case-insensitive duplicates), then rejects the response unless 8-12 valid unique queries remain and all four categories are represented.
 
+`MarketPulse.IntegrationTests` now starts one disposable PostgreSQL 18 container per xUnit collection, runs the real EF migrations, disables parallel execution for the shared database, and truncates application tables before each test. No development connection string or fixed database password is used. Thirty integration tests cover `AnalysisProcessingStateStore` and all repository implementations, including concurrent claims, transaction rollback, evidence ownership, graph loading, request-scoped duplicate checks, and real unique constraints.
+
+The integration suite found and fixed a priority-ordering defect in `SearchQueryRepository`: priority 1 is highest, so generated queries are now read in ascending numeric priority order.
+
 The pipeline loads only the request's `CollectedMarketItem` records, filters and orders them deterministically, applies configured item/text budgets, assigns temporary IDs such as `C001`, and retains an internal mapping to real database IDs. Application code independently evaluates the maximum allowed signal strength before any provider call.
 
 If no usable item exists, no AI client is called and the generator returns an honest Weak result with a null score and no insights. With usable data, Application builds injection-resistant system/user prompts and a strict JSON Schema, then parses and validates the raw provider response before creating domain entities.
@@ -81,15 +85,16 @@ OpenRouter transport settings are read from `OpenRouter`. In addition to the exi
 
 ## Next task
 
-Market Insight implementation is complete. The next reliability increment should replace or supplement the in-process queue with durable delivery and add stale-Processing recovery plus live PostgreSQL/OpenRouter integration coverage.
+Persistence integration coverage is complete. The next test increment should cover data-collector orchestration and the Hacker News/Reddit clients and collectors; the next runtime reliability increment remains durable delivery and stale-Processing recovery.
 
 ## Verification
 
 - Build: `dotnet build MarketPulse.sln --no-restore -p:NuGetAudit=false` passed with 0 warnings and 0 errors.
 - Tests: 60 unit/model/pipeline/provider/processor/API tests passed.
+- PostgreSQL integration tests: 30 passed against disposable PostgreSQL 18 with real migrations.
 - EF model: `dotnet ef migrations has-pending-model-changes` reported no pending changes.
 - Migration SQL: forward script generation from `AddCollectedMarketItems` to `AddEvidenceBasedMarketInsights` passed.
-- Runtime migration against a live PostgreSQL database was not run.
+- Runtime migration against disposable PostgreSQL 18 passed as part of the integration fixture and infrastructure tests.
 
 ## Important files
 
@@ -113,4 +118,7 @@ Market Insight implementation is complete. The next reliability increment should
 - `MarketPulse.Infrastructure/AI/OpenRouterAiMarketInsightClient.cs`
 - `MarketPulse.Infrastructure/AI/OpenRouterOptions.cs`
 - `MarketPulse.Infrastructure/Persistence/AnalysisProcessingStateStore.cs`
+- `tests/MarketPulse.IntegrationTests/Infrastructure/PostgreSqlIntegrationFixture.cs`
+- `tests/MarketPulse.IntegrationTests/Persistence/AnalysisProcessingStateStoreTests.cs`
+- `tests/MarketPulse.IntegrationTests/Persistence/RepositoryIntegrationTests.cs`
 - `tests/MarketPulse.UnitTests/`

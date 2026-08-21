@@ -20,7 +20,7 @@ namespace MarketPulse.Infrastructure.Repositories
             => await _db.SearchQueries
                 .AsNoTracking()
                 .Where(x => x.AnalysisRequestId == analysisRequestId)
-                .OrderByDescending(x => x.Priority)
+                .OrderBy(x => x.Priority)
                 .ToListAsync(ct);
 
         public Task SaveChangesAsync(CancellationToken ct = default)

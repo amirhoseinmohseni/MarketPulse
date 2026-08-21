@@ -12,6 +12,7 @@
 - `GET /api/analysis/{id}` returns request status and a stored result when available.
 - `/health` is mapped and Swagger is enabled in Development.
 - PostgreSQL persistence and EF Core migrations are present.
+- A dedicated Integration Test project runs the real migrations against a disposable PostgreSQL 18 Testcontainer and resets application tables between non-parallel database tests.
 - An in-process background queue and `AnalysisWorker` are registered.
 - AI search query generation is implemented behind Application interfaces and uses OpenRouter in Infrastructure.
 - Search-query generation uses strict JSON Schema output, removes invalid or case-insensitively duplicated individual queries, and rejects final sets outside 8-12 queries or missing any required category.
@@ -27,8 +28,9 @@
 - Hacker News data collection is implemented and enabled by the checked-in default configuration.
 - Reddit integration is implemented but disabled by default.
 - The solution includes unit and EF model tests.
+- Live PostgreSQL tests cover processing claims, concurrency, atomic completion and rollback, evidence ownership, failure transitions, repository filtering/loading, and database uniqueness constraints.
 - `dotnet build MarketPulse.sln --no-restore` passed with 0 warnings and 0 errors on the verification date.
-- All 60 unit/model/pipeline/provider/processor/API tests pass.
+- All 60 unit/model/pipeline/provider/processor/API tests and all 30 PostgreSQL integration tests pass.
 
 ## Incomplete or not yet integrated
 
@@ -43,6 +45,7 @@
 - OpenRouter and Reddit credentials are expected through configuration/environment variables; do not commit real values.
 - OpenRouter timeout and retry behavior is configured through `OpenRouter:TimeoutSeconds`, `OpenRouter:MaxRetryAttempts`, and `OpenRouter:RetryBaseDelayMilliseconds`.
 - Local Docker Compose runs PostgreSQL, an EF migration container, and the API.
+- Integration tests require a running Docker daemon but do not use the development database, Docker Compose credentials, or checked-in connection strings.
 
 ## Areas requiring care
 
